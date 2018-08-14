@@ -1,0 +1,30 @@
+{
+  "name": "tscc",
+  "version": "0.1.0",
+  "description": "Tiny Script-driven C Compiler",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tiagosr/tscc.git"
+  },
+  "keywords": [
+    "compiler",
+    "embedded",
+    "c"
+  ],
+  "author": "Tiago Rezende",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/tiagosr/tscc/issues"
+  },
+  "homepage": "https://github.com/tiagosr/tscc",
+  "devDependencies": {
+    "eslint": "^5.3.0"
+  },
+  "dependencies": {
+    "argparse": "^1.0.10"
+  }
+}
