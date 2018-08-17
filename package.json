@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "argparse": "^1.0.10",
-    "dependency-graph": "^0.7.1"
+    "dependency-graph": "^0.7.1",
+    "string-format": "^2.0.0"
   }
 }
