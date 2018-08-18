@@ -1,9 +1,13 @@
-
-import { StreamRange, StreamPosition, Range } from "./utils";
-import { CompilerError } from "./errors";
-import { Token, TokenKind } from "./tokens";
-import  * as token_kinds from "./token_kinds";
-import * as format from 'string-format';
+const CompilerContext = require("./context").CompilerContext
+const utils = require("./utils")
+const StreamRange = utils.StreamRange
+const StreamPosition = utils.StreamPosition
+const CompilerError = require("./errors").CompilerError
+const tokens = require("./tokens")
+const Token = tokens.Token
+const TokenKind = tokens.TokenKind
+const token_kinds = require("./token_kinds")
+const format = require("string-format")
 
 format.extend(String.prototype, {})
 
@@ -27,19 +31,21 @@ class Tagged {
  * 
  * @param {string} stream 
  * @param {string} filename 
+ * @param {CompilerContext} context
  */
-function tokenize(stream, filename) {
+function tokenize(stream, filename, context) {
+    /** @type {Token[]} */
     let tokens = []
     let lines = join_extended_lines(split_to_tagged_lines(stream, filename))
     let in_comment = false
     for (const line of lines) {
         try {
-            let line_tokens = tokenize_line(line, in_comment)
-            tokens += line_tokens.tokens
+            let line_tokens = tokenize_line(line, in_comment, context)
+            tokens = tokens.concat(line_tokens.tokens)
             in_comment = line_tokens.in_comment
         } catch (e) {
             if (e instanceof CompilerError) {
-                // add msg to errorcollector
+                context.emit_error(e)
             } else {
                 throw e
             }
@@ -61,7 +67,7 @@ function split_to_tagged_lines(text, filename) {
         const line = lines[line_num]
         let tagged_line = []
         for (let col = 0; col < line.length; col++) {
-            const char = line[col];
+            const char = line[col]
             let p = new StreamPosition(filename, line_num + 1, col + 1, line)
             tagged_line.push(new Tagged(char, p))
         }
@@ -78,7 +84,7 @@ function split_to_tagged_lines(text, filename) {
 function join_extended_lines(lines) {
     let i = 0
     while (i < lines.length) {
-        if (lines[i] && (lines[i][lines[i].length-1].c == "\\")) {
+        if (lines[i] && lines[i].length && (lines[i][lines[i].length-1].c == "\\")) {
             if (i + 1 < lines.length) {
                 lines[i].pop() // remove trailing \ character
                 lines[i] += lines[i + 1]
@@ -101,7 +107,7 @@ function join_extended_lines(lines) {
  * @throws {CompilerError}
  */
 function chunk_to_tokens(chunk) {
-    if (chunk) {
+    if (chunk && chunk.length) {
         let range = new StreamRange(chunk[0].p, chunk[chunk.length-1].p)
         const keyword_kind = match_keyword_kind(chunk)
         if (keyword_kind) {
@@ -138,10 +144,13 @@ class LineTokens {
  * 
  * @param {Tagged[]} line 
  * @param {boolean} in_comment 
+ * @param {CompilerContext} context
  * @returns {LineTokens}
  */
-function tokenize_line(line, in_comment) {
-    let tokens = []
+function tokenize_line(line, in_comment, context) {
+
+    /** @type {Token[]} */
+    let tokens = new Array()
 
     let chunk_start = 0
     let chunk_end = 0
@@ -168,7 +177,7 @@ function tokenize_line(line, in_comment) {
             }
         } else if (symbol_kind == token_kinds.slash && next == token_kinds.star) {
             // we just started a comment
-            tokens += chunk_to_tokens(line.slice(chunk_start, chunk_end))
+            tokens = tokens.concat(chunk_to_tokens(line.slice(chunk_start, chunk_end)))
             in_comment = true
         } else if (symbol_kind == token_kinds.slash && next == token_kinds.slash) {
             // two slashes is a comment //
@@ -176,7 +185,7 @@ function tokenize_line(line, in_comment) {
             break
         } else if (" \t\n\r\v".indexOf(line[chunk_end].c) > -1) {
             // skip whitespace characters: commit characters that were consumed up to now
-            tokens += chunk_to_tokens(line.slice(chunk_start, chunk_end))
+            tokens = tokens.concat(chunk_to_tokens(line.slice(chunk_start, chunk_end)))
             chunk_start = chunk_end + 1
             chunk_end = chunk_start
         } else if (include_line) {
@@ -184,8 +193,8 @@ function tokenize_line(line, in_comment) {
                 throw new CompilerError("extra tokens at the end of #include directive")
             }
             let {filename, end} = read_include_filename(line, chunk_end)
-            tokens.push(new Token(token_kinds.include_file, filename, null, 
-                new Range(line[chunk_end].p, line[end].p)))
+            tokens = tokens.push(new Token(token_kinds.include_file, filename, null, 
+                new StreamRange(line[chunk_end].p, line[end].p)))
             chunk_start = end + 1
             chunk_end = chunk_start
             seen_filename = true
@@ -206,8 +215,9 @@ function tokenize_line(line, in_comment) {
                 // emit error message to say char string is empty
             } else if ((kind == token_kinds.char_string) && (chars.length > 1)) {
                 // emit error message to say char string is too big
+            } else {
+                tokens.push(new Token(kind, chars, rep, r))
             }
-            tokens.push(new Token(kind, chars, rep, r))
 
             chunk_start = end + 1
             chunk_end = chunk_start
@@ -218,7 +228,10 @@ function tokenize_line(line, in_comment) {
             let r = new StreamRange(line[symbol_start_index].p, line[symbol_end_index].p)
             let symbol_token = new Token(symbol_kind, null, null, r)
 
-            tokens += chunk_to_tokens(line.slice(chunk_start, chunk_end))
+            let remainder = chunk_to_tokens(line.slice(chunk_start, chunk_end))
+            tokens = tokens.concat(remainder)
+            tokens.push(symbol_token)
+
             chunk_start = chunk_end + symbol_kind.text_repr.length
             chunk_end = chunk_start
         } else {
@@ -226,7 +239,7 @@ function tokenize_line(line, in_comment) {
         }
         
     }
-    tokens += chunk_to_tokens(line.splice(chunk_start, chunk_end))
+    tokens = tokens.concat(chunk_to_tokens(line.slice(chunk_start, chunk_end)))
 
     if ((include_line || match_include_command(tokens)) && !seen_filename) {
         read_include_filename(line, chunk_end)
@@ -261,9 +274,10 @@ function match_symbol_kind_at(content, start) {
     for (const symbol_kind of token_kinds.symbol_kinds) {
         try {
             let found = true
-            for (let i = 0; i < symbol_kind.text_repr.length; i++) {
+            let smallest = Math.min(content.length-start, symbol_kind.text_repr.length)
+            for (let i = 0; i < smallest; i++) {
                 if (content[start+i].c != symbol_kind.text_repr[i]) {
-                    found = false;
+                    found = false
                 }
             }
             if (found) return symbol_kind
@@ -425,9 +439,9 @@ function read_include_filename(line, start) {
 }
 
 /**
- * 
- * @param {Tagged[]} chunk 
- * @returns {?TokenKind}
+ * Checks if chunk is one of the keywords - if so, return that keyword's kind
+ * @param {Tagged[]} chunk List of tagged characters
+ * @returns {?TokenKind} Keyword kind if match, else null
  */
 function match_keyword_kind(chunk) {
     const token_str = chunk_to_string(chunk)

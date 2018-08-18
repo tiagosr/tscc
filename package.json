@@ -2,8 +2,9 @@
   "name": "tscc",
   "version": "0.1.0",
   "description": "Tiny Script-driven C Compiler",
-  "main": "main.js",
+  "main": "src/main.js",
   "scripts": {
+    "cc": "node ",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

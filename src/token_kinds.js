@@ -1,9 +1,11 @@
-import { TokenKind } from "./tokens";
+const TokenKind = require("./tokens").TokenKind
 
 /** @type {TokenKind[]} */
 let keyword_kinds = []
 /** @type {TokenKind[]} */
 let symbol_kinds = []
+/** @type {TokenKind[]} */
+let error_kinds = []
 
 // keywords for base types
 exports.bool_kw = new TokenKind("_Bool", keyword_kinds)
@@ -103,6 +105,10 @@ exports.number = new TokenKind()
 exports.string = new TokenKind()
 exports.char_string = new TokenKind()
 exports.include_file = new TokenKind()
+exports.define_placeholder = new TokenKind()
+
+exports.error_char_string_size = new TokenKind("", error_kinds)
 
 exports.keyword_kinds = keyword_kinds
 exports.symbol_kinds = symbol_kinds
+exports.error_kinds = error_kinds

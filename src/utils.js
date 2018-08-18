@@ -21,9 +21,9 @@ class RangeDescendingIterator {
         this.increment = increment
     }
     next() {
-        const v = this.current;
+        const v = this.current
         if (v >= this.end) {
-            this.current += this.increment; // this is in effect decreasing the value
+            this.current += this.increment // this is in effect decreasing the value
             return { value: v, done: false }
         }
         return { done: true }

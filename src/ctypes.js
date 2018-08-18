@@ -1,4 +1,4 @@
-import * as token_kinds from "./token_kinds";
+const token_kinds = require("./token_kinds")
 
 class CType {
     /**
@@ -70,13 +70,13 @@ class IntegerCType extends CType {
      * @param {boolean} signed 
      */
     constructor(size, signed) {
-        this._signed = signed
         super(size)
+        this._signed = signed
     }
     weak_compat(other) {
         return (this._orig == other._orig) &&
             (this._signed == other._signed) &&
-            (this.is_bool == this.is_bool);
+            (this.is_bool == this.is_bool)
     }
     get is_complete() { return true }
     get is_object() { return true }
@@ -107,8 +107,8 @@ class PointerCType extends CType {
      * @param {boolean} [is_const] 
      */
     constructor(pointed_to, is_const = false) {
-        this.pointed_to = pointed_to
         super(4, is_const)
+        this.pointed_to = pointed_to
     }
     weak_compat(other) {
         return other.is_pointer && this.pointed_to.compatible(other.pointed_to)
@@ -126,10 +126,10 @@ class FunctionCType extends CType {
      * @param {boolean} no_info 
      */
     constructor(args, ret, no_info) {
+        super(1)
         this.args = args
         this.ret = ret
         this.no_info = no_info
-        super(1)
     }
 
     get is_function() { return true }
@@ -159,11 +159,11 @@ class UnionStructCType extends CType {
      * @param {?UnionStructMemberCType[]} [members] List of members
      */
     constructor(tag, members = null) {
+        super(1)
         this.tag = tag
         /** @member {Object.<string, UnionStructCTypeOffset>} offsets */
         this.offsets = {}
         this.set_members(members)
-        super(1)
     }
 
     weak_compat(other) {

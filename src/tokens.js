@@ -1,4 +1,4 @@
-import { Range } from "./utils"
+const StreamRange = require("./utils").StreamRange
 
 class TokenKind {
     /**
@@ -37,7 +37,7 @@ class Token {
      * @param {TokenKind} kind 
      * @param {string} content 
      * @param {string} rep 
-     * @param {?Range} r 
+     * @param {?StreamRange} r 
      */
     constructor(kind, content = "", rep = "", r = null) {
         this.kind = kind
@@ -52,7 +52,17 @@ class Token {
     toString() {
         return this.rep || this.content
     }
+
+    /** @type {boolean} */
+    get is_line_start() {
+        return this.r.start.column == 0
+    }
+}
+
+class ErrorToken extends Token {
+    
 }
 
 exports.TokenKind = TokenKind
 exports.Token = Token
+exports.ErrorToken = ErrorToken
