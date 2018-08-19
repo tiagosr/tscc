@@ -6,9 +6,9 @@ class RangeAscendingIterator {
         this.increment = increment
     }
     next() {
-        const v = this.current;
+        const v = this.current
         if (v <= this.end) {
-            this.current += this.increment;
+            this.current += this.increment
             return { value: v, done: false }
         }
         return { done: true }
@@ -43,7 +43,7 @@ class Range {
         this.end = end
         this.increment = increment
     }
-    [Symbol.iterator]() {
+    next() {
         if (this.increment < 0)
             return new RangeDescendingIterator(this.start, this.end, this.increment)
         return new RangeAscendingIterator(this.start, this.end, this.increment)
@@ -86,6 +86,6 @@ class StreamRange {
     }
 }
 
-exports.StreamPosition = StreamPosition;
-exports.StreamRange = StreamRange;
-exports.Range = Range;
+exports.StreamPosition = StreamPosition
+exports.StreamRange = StreamRange
+exports.Range = Range

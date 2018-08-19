@@ -34,6 +34,15 @@ class Loc {
     }
 }
 
+class RegLoc extends Loc {
+    constructor(name) {
+        super(name)
+        this.name = name
+    }
+
+
+}
+
 class MemLoc extends Loc {
     /**
      * 
@@ -79,5 +88,6 @@ class LiteralValueLoc extends Loc {
 }
 
 exports.Loc = Loc
+exports.RegLoc = RegLoc
 exports.MemLoc = MemLoc
 exports.LiteralValueLoc = LiteralValueLoc

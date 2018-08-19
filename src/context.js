@@ -1,4 +1,5 @@
 const CompilerError = require("./errors").CompilerError
+const CompilationTarget = require("./target").CompilationTarget
 const Console = require("console").Console
 
 class Config {
@@ -77,11 +78,13 @@ class PreprocessorContext extends Context {
 class CompilerContext extends Context {
     /**
      * 
-     * @param {Config} config 
+     * @param {Config} config
+     * @param {CompilationTarget} target
      */
-    constructor(config) {
+    constructor(config, target) {
         super(config)
         this.objects = []
+        this.target = target
     }
 }
 

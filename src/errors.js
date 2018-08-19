@@ -1,4 +1,6 @@
-//import { StreamRange, StreamPosition } from "./utils";
+const utils = require("./utils")
+const StreamRange = utils.StreamRange
+const StreamPosition = utils.StreamPosition
 
 class CompilerError extends Error {
     /**
@@ -15,8 +17,14 @@ class CompilerError extends Error {
     }
 }
 
+class NotImplementedError extends Error {
+    constructor() {
+        super("Not implemented")
+    }
+}
 
 
 
 exports.CompilerError = CompilerError
+exports.NotImplementedError = NotImplementedError
 

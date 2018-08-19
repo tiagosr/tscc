@@ -1,8 +1,63 @@
 const ctypes = require("../ctypes")
+const NotImplementedError = require("../errors").NotImplementedError
+const CompilerContext = require("../context").CompilerContext
+const control_ops = require("./control")
 
-class ICode {
+class ILContext {
 
+    /**
+     * 
+     * @param {CompilerContext} context 
+     */
+    constructor(context) {
+        this.context = context
+        /** @type {Object.<string,IOp[]>} */
+        this.ops = {}
+        /** @type {string} */
+        this.cur_func = null
+        this.label_num = 0
+        this.static_inits = {}
+        this.literals = {}
+        this.string_literals = {}
+    }
+
+    copy() {
+        let new_il_context = new ILContext(this.context)
+
+        new_il_context.ops = {}
+        for (const name in this.ops) {
+            if (this.ops.hasOwnProperty(name)) {
+                new_il_context.ops[name] = [...this.ops[name]]
+            }
+        }
+        new_il_context.cur_func = this.cur_func
+        new_il_context.label_num = this.label_num
+        new_il_context.static_inits = {...this.static_inits}
+        new_il_context.literals = {...this.literals}
+        new_il_context.string_literals = {...this.string_literals}
+        return new_il_context
+    }
+
+    /**
+     * Adds an IOp to the list for the current function
+     * @param {IOp} op 
+     */
+    add(op) {
+        this.ops[this.cur_func].push(op)
+    }
+
+    get always_returns() {
+        let cur_func_ops = this.ops[this.cur_func]
+        if (cur_func_ops) {
+            if (cur_func_ops[cur_func_ops.length-1] instanceof control_ops.Return) {
+                return true
+            }
+        }
+        return false
+    }
 }
+
+
 
 class IValue {
     /**
@@ -78,11 +133,12 @@ class SymbolTable {
     }
 }
 
-class ICommand {
+class IOp {
     /** @type {IValue[]} */
-    get inputs() { throw new Error("Not implemented") }
+    get inputs() { throw new NotImplementedError() }
     /** @type {IValue[]} */
-    get outputs() { throw new Error("Not implemented") }
+    get outputs() { throw new NotImplementedError() }
+    /** @type {IValue[]} */
     get clobbers() { return [] }
     get rel_spot_conflicts() { return {} }
     get abs_spot_conflicts() { return {} }
@@ -98,16 +154,16 @@ class ICommand {
     get label_name() { return null }
     get targets() { return [] }
     make_asm(spot_map, home_spots, get_reg, asm_code) {
-        throw new Error("Not implemented")
+        throw new NotImplementedError()
     }
     is_imm(spot) {
 
     }
 }
 
-exports.ICode = ICode
+exports.ILContext = ILContext
 exports.IValue = IValue
-exports.ICommand = ICommand
+exports.IOp = IOp
 
 exports.IntegerLiteral = IntegerLiteral
 exports.StringLiteral = StringLiteral

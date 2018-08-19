@@ -1,4 +1,5 @@
 const token_kinds = require("./token_kinds")
+const NotImplementedError = require("./errors").NotImplementedError
 
 class CType {
     /**
@@ -21,7 +22,7 @@ class CType {
      * @returns {boolean} True if compatible, false otherwise
      */
     weak_compat(other) {
-        throw new Error("not implemented")
+        throw new NotImplementedError
     }
 
     get is_complete() { return false }
@@ -59,6 +60,21 @@ class CType {
      */
     make_unqual() {
         return Object.assign({ __prototype__: this.__prototype__ }, this, { _const: false })
+    }
+
+    /** @type {PointerCType} */
+    get as_pointer() {
+        throw new NotImplementedError()
+    }
+
+    /** @type {UnionStructCType} */
+    get as_union_struct() {
+        throw new NotImplementedError()
+    }
+
+    /** @type {FunctionCType} */
+    get as_function() {
+        throw new NotImplementedError()
     }
 }
 
@@ -116,6 +132,7 @@ class PointerCType extends CType {
     get is_complete() { return true }
     get is_pointer() { return true }
     get is_object() { return true }
+    get as_pointer() { return this }
 }
 
 class FunctionCType extends CType {
@@ -161,8 +178,10 @@ class UnionStructCType extends CType {
     constructor(tag, members = null) {
         super(1)
         this.tag = tag
-        /** @member {Object.<string, UnionStructCTypeOffset>} offsets */
+        /** @type {Object.<string, UnionStructCTypeOffset>} */
         this.offsets = {}
+        /** @type {UnionStructMemberCType[]} */
+        this.members = []
         this.set_members(members)
     }
 
@@ -231,6 +250,7 @@ exports.VoidCType = VoidCType
 exports.IntegerCType = IntegerCType
 exports.PointerCType = PointerCType
 exports.FunctionCType = FunctionCType
+exports.UnionStructCType = UnionStructCType
 exports.StructCType = StructCType
 exports.UnionCType = UnionCType
 

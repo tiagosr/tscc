@@ -4,7 +4,7 @@
   "description": "Tiny Script-driven C Compiler",
   "main": "src/main.js",
   "scripts": {
-    "cc": "node ",
+    "cc": "node src/main.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -27,6 +27,7 @@
   },
   "dependencies": {
     "argparse": "^1.0.10",
+    "deepcopy": "^1.0.0",
     "dependency-graph": "^0.7.1",
     "string-format": "^2.0.0"
   }
