@@ -1,20 +1,10 @@
 class Loc {
     /**
      * 
-     * @param {*} context 
-     * @param {any} detail 
+     * @param {?any} detail 
      */
-    constructor(context, detail) {
-        this.context = context
+    constructor(detail=null) {
         this.detail = detail
-    }
-    /**
-     * 
-     * @param {number} size 
-     * @returns {string}
-     */
-    asm_str(size) {
-        throw new Error("Not implement")
     }
     base_ptr_offset() { return 0 }
     shift(chunk, count=null) {
@@ -35,42 +25,36 @@ class Loc {
 }
 
 class RegLoc extends Loc {
+    /**
+     * 
+     * @param {string} name 
+     */
     constructor(name) {
         super(name)
         this.name = name
     }
-
-
 }
 
 class MemLoc extends Loc {
     /**
      * 
      * @param {?Loc} base 
-     * @param {} offset 
-     * @param {*} chunk 
-     * @param {*} count 
+     * @param {number} offset 
+     * @param {number} chunk 
+     * @param {?number} count
      */
-    constructor(context, base, offset=0, chunk=0, count=null) {
-        super(context, [base, offset, chunk, count])
+    constructor(base, offset=0, chunk=0, count=null) {
+        super([base, offset, chunk, count])
         this.base = base
         this.offset = offset
         this.chunk = chunk
         this.count = count
     }
-    asm_str(size) {
-        let base_str = this.base.asm_str()
-        if (this.base instanceof Loc) {
-            base_str = this.base.asm_str(0)
-        }
-    }
-    base_ptr_offset() {
-        /*
-        if (this.base == )
+    base_ptr_offset() { return 0 }
+}
 
-         */
-        return 0
-    }
+class BaseRegMemLoc extends MemLoc {
+    base_ptr_offset() { return -this.offset }
 }
 
 class LiteralValueLoc extends Loc {
@@ -82,12 +66,10 @@ class LiteralValueLoc extends Loc {
         super(value)
         this.value = value
     }
-    asm_str(size) {
-        return this.value
-    }
 }
 
 exports.Loc = Loc
 exports.RegLoc = RegLoc
 exports.MemLoc = MemLoc
+exports.BaseRegMemLoc = BaseRegMemLoc
 exports.LiteralValueLoc = LiteralValueLoc

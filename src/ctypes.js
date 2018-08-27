@@ -265,6 +265,7 @@ exports.unsigned_char_max = 255
 
 exports.short_t = new IntegerCType(2, true)
 exports.unsigned_short_t = new IntegerCType(2, false)
+exports.unsigned_short_max = 65535
 
 exports.int_t = new IntegerCType(4, true)
 exports.unsigned_int_t = new IntegerCType(4, false)

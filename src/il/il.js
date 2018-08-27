@@ -2,6 +2,7 @@ const ctypes = require("../ctypes")
 const NotImplementedError = require("../errors").NotImplementedError
 const CompilerContext = require("../context").CompilerContext
 const control_ops = require("./control")
+const locs = require("./locations")
 
 class ILContext {
 
@@ -32,9 +33,9 @@ class ILContext {
         }
         new_il_context.cur_func = this.cur_func
         new_il_context.label_num = this.label_num
-        new_il_context.static_inits = {...this.static_inits}
-        new_il_context.literals = {...this.literals}
-        new_il_context.string_literals = {...this.string_literals}
+        new_il_context.static_inits = Object.assign({}, this.static_inits)
+        new_il_context.literals = Object.assign({},this.literals)
+        new_il_context.string_literals = Object.assign({}, this.string_literals)
         return new_il_context
     }
 
@@ -156,8 +157,26 @@ class IOp {
     make_asm(spot_map, home_spots, get_reg, asm_code) {
         throw new NotImplementedError()
     }
-    is_imm(spot) {
+    is_imm(loc) {
+        return (loc instanceof locs.LiteralValueLoc)
+    }
+    is_imm8(loc) {
+        return this.is_imm(loc) && parseInt(loc.detail) < ctypes.unsigned_char_max
+    }
+    is_imm16(loc) {
+        return this.is_imm(loc) && parseInt(loc.detail) < ctypes.unsigned_short_max
+    }
+}
 
+class RelLocConflict {
+    /**
+     * 
+     * @param {locs.Loc} target 
+     * @param {locs.Loc[]} sources 
+     */
+    constructor(target, sources) {
+        this.target = target
+        this.sources = sources
     }
 }
 
@@ -171,3 +190,5 @@ exports.SymbolTable = SymbolTable
 exports.SymbolTableDefinitionStatus = SymbolTableDefinitionStatus
 exports.SymbolTableLinkage = SymbolTableLinkage
 exports.SymbolTableStorageDuration = SymbolTableStorageDuration
+
+exports.RelLocConflict = RelLocConflict

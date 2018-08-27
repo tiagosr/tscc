@@ -15,9 +15,6 @@ exports.Label = class Label extends il.IOp {
     get inputs() { return [] }
     get outputs() { return [] }
     get label_name() { return this.label }
-    make_asm(loc_map, home_locs, get_reg, asm_code) {
-        // asm_code.add(asm_ops.Label(this.label))
-    }
 }
 
 exports.Jump = class Jump extends il.IOp {
@@ -28,9 +25,6 @@ exports.Jump = class Jump extends il.IOp {
     get inputs() { return [] }
     get outputs() { return [] }
     get targets() { return [this.label,] }
-    make_asm(loc_map, home_locs, get_reg, asm_code) {
-        // asm_code.add(asm_ops.Jmp(this.label))
-    }
 }
 
 class ConditionalJump extends il.IOp {
@@ -48,15 +42,6 @@ class ConditionalJump extends il.IOp {
     get inputs() { return [this.cond,] }
     get outputs() { return [] }
     get targets() { return [this.label,] }
-    make_asm(loc_map, home_locs, get_reg, asm_code) {
-        let size = this.cond.ctype.size
-        let cond_spot = loc_map[this.cond]
-        if (loc_map[this.cond] instanceof LiteralValueLoc) {
-            
-            //
-        }
-        // asm_code.add(asm_ops.Jmp(this.label))
-    }
 }
 
 exports.JumpZero = class JumpZero extends ConditionalJump {
