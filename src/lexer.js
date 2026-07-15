@@ -87,7 +87,7 @@ function join_extended_lines(lines) {
         if (lines[i] && lines[i].length && (lines[i][lines[i].length-1].c == "\\")) {
             if (i + 1 < lines.length) {
                 lines[i].pop() // remove trailing \ character
-                lines[i] += lines[i + 1]
+                lines[i] = [...lines[i], ...lines[i+1]]
                 lines.splice(i+1, 1)
                 i -= 1
             } else {
@@ -193,12 +193,12 @@ function tokenize_line(line, in_comment, context) {
                 throw new CompilerError("extra tokens at the end of #include directive")
             }
             let {filename, end} = read_include_filename(line, chunk_end)
-            tokens = tokens.push(new Token(token_kinds.include_file, filename, null, 
-                new StreamRange(line[chunk_end].p, line[end].p)))
+            tokens = [...tokens, new Token(token_kinds.include_file, filename, null, 
+                new StreamRange(line[chunk_end].p, line[end].p))]
             chunk_start = end + 1
             chunk_end = chunk_start
             seen_filename = true
-        } else if (symbol_kind in [token_kinds.dquote, token_kinds.squote]) {
+        } else if ([token_kinds.dquote, token_kinds.squote].includes(symbol_kind)) {
             let quote_str = "'"
             let kind = token_kinds.char_string
             let add_null = false
@@ -207,7 +207,7 @@ function tokenize_line(line, in_comment, context) {
                 kind = token_kinds.string
                 add_null = true
             }
-            let [chars, end] = read_string(line, chunk_end + 1, quote_str, add_null)
+            let {chars, length:end} = read_string(line, chunk_end + 1, quote_str, add_null)
             let rep = chunk_to_string(line.slice(chunk_end, end+1))
             let r = new StreamRange(line[chunk_end].p, line[end].p)
 
@@ -355,19 +355,19 @@ function read_string(line, start, delim, append_null) {
             (line[i].c == "\\") &&
             (line[i + 1].c in escapes)
         ) {
-            chars.append(escapes[line[i+1].c])
+            chars.push(escapes[line[i+1].c])
             i += 2
         } else if (
             (i + 1 < line.length) &&
             (line[i].c == "\\") &&
-            (line[i + 1].c in octdigits)
+            octdigits.includes(line[i + 1].c)
         ) {
             let octal = line[i+1].c
             i += 2
             while (
                 (i < line.length) &&
                 (octal.length < 3) &&
-                (line[i].c in octdigits)
+                octdigits.includes(line[i].c)
             ) {
                 octal += line[i].c
                 i += 1
@@ -377,17 +377,17 @@ function read_string(line, start, delim, append_null) {
             (i + 2 < line.length) &&
             (line[i].c == "\\") &&
             (line[i+1].c == "x") &&
-            (line[i+2].c in hexdigits)
+            hexdigits.includes(line[i+2].c)
         ) {
             let hex = line[i+2].c
             i += 3
-            while ((i < line.length) && (line[i].c in hexdigits)) {
+            while ((i < line.length) && hexdigits.includes(line[i].c)) {
                 hex += line[i].c
                 i += 1
             }
             chars.push(parseInt(hex, 16))
         } else {
-            chars.append(line[i].c.charCodeAt(0))
+            chars.push(line[i].c.charCodeAt(0))
             i += 1
         }
     }
@@ -435,7 +435,7 @@ function read_include_filename(line, start) {
             throw e
         }
     }
-    return new IncludeFilenameIndex(chunk_to_string(line.slice(start, i+1)))
+    return new IncludeFilenameIndex(chunk_to_string(line.slice(start, i+1)), i)
 }
 
 /**
@@ -474,7 +474,7 @@ function match_number_string(chunk) {
  */
 function match_identifier_name(chunk) {
     const token_str = chunk_to_string(chunk)
-    if (token_str.match(/[_a-zA-Z][_a-zA-Z0-9]*$/)) {
+    if (token_str.match(/^[_a-zA-Z][_a-zA-Z0-9]*$/)) {
         return token_str
     }
     return null

@@ -53,6 +53,17 @@ function match_define(tokens, index) {
  * 
  * @param {Token[]} tokens 
  * @param {number} index 
+ * @param {CompilerContext} context 
+ * @returns {PreprocessItemResult}
+ */
+function process_define(tokens, index, context) {
+
+}
+
+/**
+ * 
+ * @param {Token[]} tokens 
+ * @param {number} index 
  * @returns {boolean}
  */
 function match_if(tokens, index) {
@@ -199,18 +210,24 @@ function process(tokens, this_file, context) {
     let processed = []
     let i = 0
     let this_file_token = new Token(token_kinds.string, this_file)
-    context.defines["__FILE__"] = this_file_token
-    while (i < tokens.length - 2) {
+    context.defines["__FILE__"] = [this_file_token, ]
+    while (i < tokens.length) {
         if (match_include(tokens, i)) {
             this_file_token = context.defines["__FILE__"] // back up __FILE__ (as it might have been changed by user code)
             let result = process_include(tokens, i, this_file, context)
-            context.defines["__FILE__"] = this_file_token // reset __FILE__ #define
-            processed = processed.concat(result.tokens)
+            context.defines["__FILE__"] = [this_file_token, ] // reset __FILE__ #define
+            processed = [...processed, ...result.tokens]
             i += result.consumed
         } else if (match_defined_symbols(tokens, i, context.defines)) {
             let result = substitute_defined(tokens, i, context.defines, context)
-            processed = processed.concat(result.tokens)
+            processed = [...processed, ...result.tokens]
             i += result.consumed
+        } else if (match_if(tokens, i)) {
+            // TODO
+        } else if (match_ifdef(tokens, i)) {
+            // TODO
+        } else if (match_define(tokens, i)) {
+            // TODO
         } else {
             processed.push(tokens[i])
             i++
