@@ -13,6 +13,7 @@ const fixtures_dir = path.join(__dirname, "fixtures")
 /**
  * @param {?string[]} sys_include_paths
  * @param {Object.<string, Token[]>} defines
+ * @returns {PreprocessorContext}
  */
 function make_context(sys_include_paths = [], defines = {}) {
     const config = new Config(fixtures_dir, true)
@@ -25,13 +26,17 @@ function make_context(sys_include_paths = [], defines = {}) {
  * @param {string} source
  * @param {string} filename
  * @param {PreprocessorContext} context
+ * @returns {Token[]}
  */
 function preprocess_source(source, filename, context) {
     const tokens = tokenize(source, filename, context)
     return preprocess(tokens, filename, context)
 }
 
-/** @param {Token[]} tokens */
+/**
+ * @param {Token[]} tokens
+ * @returns {string[]}
+ */
 function contents(tokens) {
     return tokens.map((token) => token.content)
 }
@@ -120,6 +125,21 @@ describe("preprocessor", function() {
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("#define ADD(a, b) a + b\nADD(1, 2)", filename, context)
             assert.deepEqual(contents(result), ["1", "+", "2"])
+        })
+
+        describe("#undef", function() {
+            it("undefines a previously defined macro", function() {
+                const context = make_context()
+                const filename = path.join(fixtures_dir, "virtual_main.c")
+                const result = preprocess_source("#define A 1\n#undef A\nA", filename, context)
+                assert.deepEqual(contents(result), ["A"])
+            })
+            it("fails silently if an identifier was not defined", function() {
+                const context = make_context()
+                const filename = path.join(fixtures_dir, "virtual_main.c")
+                const result = preprocess_source("#undef A\nA", filename, context)
+                assert.deepEqual(contents(result), ["A"])
+            })
         })
     })
 

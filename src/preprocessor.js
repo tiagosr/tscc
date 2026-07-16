@@ -4,16 +4,17 @@ import { tokenize } from "./lexer.js"
 import { pound, identifier as _identifier, open_paren, close_paren, ellipsis, comma, include_file, define_placeholder, string } from "./token_kinds.js"
 import { resolve } from "path"
 import { existsSync, readFileSync } from "fs"
-import { CompilerError } from "./errors.js"
+import { CompilerError, NotImplementedError, PreprocessorError } from "./errors.js"
+import { StreamRange } from "./utils.js"
 
 class PreprocessItemResult {
     /**
      * 
-     * @param {Token[]} tokens 
+     * @param {Token[]} produced 
      * @param {number} consumed
      */
-    constructor(tokens, consumed) {
-        this.tokens = tokens
+    constructor(produced, consumed) {
+        this.produced = produced
         this.consumed = consumed
     }
 }
@@ -117,6 +118,20 @@ function process_define(tokens, index, context) {
         variadic
     )
     return new PreprocessItemResult([], i-index)
+}
+
+/**
+ * 
+ * @param {Token[]} tokens 
+ * @param {number} index 
+ * @returns {boolean}
+ */
+function match_undef(tokens, index) {
+    return (
+        tokens[index].kind == pound &&
+        tokens[index + 1].kind == _identifier &&
+        tokens[index + 1].content == "undef"
+    )
 }
 
 /**
@@ -254,7 +269,7 @@ function match_defined_symbols(tokens, index, defines) {
  * @param {number} index 
  * @param {Object.<string,PreprocessorDefine>} defines
  * @param {CompilerContext} context 
- * @returns {?PreprocessItemResult}
+ * @returns {PreprocessItemResult}
  */
 function substitute_defined(tokens, index, defines, context) {
     /** @type {Token[]} */
@@ -277,10 +292,48 @@ function substitute_defined(tokens, index, defines, context) {
     for (let i = 0; i < new_tokens.length; i++) {
         if (match_defined_symbols(new_tokens, i, definesPaintedBlue)) {
             let repeat = substitute_defined(new_tokens, i, definesPaintedBlue);
-            new_tokens = [...new_tokens.slice(0, i), ...repeat.tokens, ...new_tokens.slice(i+1)];
+            new_tokens = [...new_tokens.slice(0, i), ...repeat.produced, ...new_tokens.slice(i+1)];
         }
     }
     return new PreprocessItemResult(new_tokens, consumed_tokens)
+}
+
+
+/**
+ * 
+ * @param {Token} token 
+ * @param {Token[]} tokens 
+ * @param {number} i 
+ * @param {Context} context 
+ * @returns {{produced:Token[], consumed:number}}
+ */
+function process_token(token, tokens, i, context, this_file) {
+    if (match_include(tokens, i)) {
+        let this_file_body = context.defines["__FILE__"].body // back up __FILE__ (as it might have been changed by user code)
+        let result = process_include(tokens, i, this_file, context)
+        context.defines["__FILE__"] = new PreprocessorDefine("__FILE__", null, this_file_body, -1) // reset __FILE__ #define
+        return {produced: result.produced, consumed: result.consumed}
+    } else if (match_if(tokens, i)) {
+        // TODO
+        throw new NotImplementedError()
+    } else if (match_ifdef(tokens, i)) {
+        // TODO
+        throw new NotImplementedError()
+    } else if (match_define(tokens, i)) {
+        // TODO flesh out
+        let result = process_define(tokens, i, context)
+        return {produced: result.produced, consumed: result.consumed}
+    } else if (match_undef(tokens, i)) {
+        if (tokens[i+2].content in context.defines) {
+            delete context.defines[tokens[i+2].content]
+        }
+        return {produced: [], consumed: 3}
+    } else if (match_defined_symbols(tokens, i, context.defines)) {
+        let result = substitute_defined(tokens, i, context.defines, context)
+        return {produced: result.produced, consumed: result.consumed}
+    } else {
+        return {produced: [token, ], consumed: 1}
+    }
 }
 
 /**
@@ -297,29 +350,9 @@ function process(tokens, this_file, context) {
     let this_file_token = new Token(string, this_file)
     context.defines["__FILE__"] = new PreprocessorDefine("__FILE__", null, [this_file_token, ], -1)
     while (i < tokens.length) {
-        if (match_include(tokens, i)) {
-            let this_file_body = context.defines["__FILE__"].body // back up __FILE__ (as it might have been changed by user code)
-            let result = process_include(tokens, i, this_file, context)
-            context.defines["__FILE__"] = new PreprocessorDefine("__FILE__", null, this_file_body, -1) // reset __FILE__ #define
-            processed = [...processed, ...result.tokens]
-            i += result.consumed
-        } else if (match_defined_symbols(tokens, i, context.defines)) {
-            let result = substitute_defined(tokens, i, context.defines, context)
-            processed = [...processed, ...result.tokens]
-            i += result.consumed
-        } else if (match_if(tokens, i)) {
-            // TODO
-        } else if (match_ifdef(tokens, i)) {
-            // TODO
-        } else if (match_define(tokens, i)) {
-            // TODO flesh out
-            let result = process_define(tokens, i, context)
-            processed = [...processed, ...result.tokens]
-            i += result.consumed
-        } else {
-            processed.push(tokens[i])
-            i++
-        }
+        var {produced, consumed} = process_token(tokens[i], tokens, i, context, this_file);
+        i += consumed;
+        processed = [...processed, ...produced]
     }
     return processed.concat(tokens.slice(i))
 }

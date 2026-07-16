@@ -8,7 +8,7 @@ class CompilerError extends Error {
      * @param {bool} warning 
      */
     constructor(description, range, warning) {
-        super("Compiler error: " + description)
+        super(`Compiler error: ${description}`)
         this.description = description
         this.range = range
         this.warning = warning
@@ -21,7 +21,21 @@ class NotImplementedError extends Error {
     }
 }
 
+class PreprocessorError extends Error {
+    /**
+     * 
+     * @param {string} description 
+     * @param {StreamRange} range 
+     * @param {Token[]} processed 
+     */
+    constructor(description, range, processed) {
+        super(`Preprocessor error: ${description}`)
+        this.description = description
+        this.range = range
+        this.processed = processed
+    }
+}
 
 
-export { CompilerError, NotImplementedError }
+export { CompilerError, NotImplementedError, PreprocessorError }
 
