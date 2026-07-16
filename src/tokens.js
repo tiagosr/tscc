@@ -11,18 +11,8 @@ class TokenKind {
     constructor(text_repr = "", kinds = []) {
         this.text_repr = text_repr
         kinds.push(this)
-        kinds.sort(TokenKind.kindsSorter)
     }
 
-    /**
-     * Sorts kinds by key length
-     * @param {TokenKind} a 
-     * @param {TokenKind} b 
-     * @returns {number}
-     */
-    static kindsSorter(a, b) {
-        return a.text_repr.length - b.text_repr.length
-    }
     /**
      * @returns {string}
      */
