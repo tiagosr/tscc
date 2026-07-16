@@ -86,6 +86,4 @@ class StreamRange {
     }
 }
 
-exports.StreamPosition = StreamPosition
-exports.StreamRange = StreamRange
-exports.Range = Range
+export { StreamPosition, StreamRange, Range }

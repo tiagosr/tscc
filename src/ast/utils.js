@@ -1,10 +1,7 @@
-const utils = require("../utils")
-const StreamRange = utils.StreamRange
-const ctypes = require("../ctypes")
-const il = require("../il/il")
-const errors = require("../errors")
-const CompilerError = errors.CompilerError
-const NotImplementedError = errors.NotImplementedError
+import { StreamRange } from "../utils.js"
+import { PointerCType } from "../ctypes.js"
+import { IValue } from "../il/il.js"
+import { CompilerError, NotImplementedError } from "../errors.js"
 
 
 class LValue {
@@ -74,7 +71,7 @@ class DirectLValue extends LValue {
         let right_cast = set_type(rvalue, this.ctype, il_code, this.il_value, context)
     }
     addr(il_code) {
-        let out = new il.IValue(new ctypes.PointerCType(this.il_value.ctype))
+        let out = new IValue(new PointerCType(this.il_value.ctype))
         //il_code.add(value_cmds.AddrOf(out, this.il_value))
         return out
     }
@@ -96,7 +93,7 @@ class IndirectLValue extends LValue {
         return set_type(rvalue, this.ctype, il_code, this.addr_value, context)
     }
     addr(il_code) {
-        let out = new il.IValue(new ctypes.PointerCType(this.addr_value.ctype))
+        let out = new IValue(new PointerCType(this.addr_value.ctype))
         //il_code.add(value_cmds.AddrOf(out, this.addr_value))
         return out
     }
@@ -169,7 +166,7 @@ function set_type(il_value, ctype, il_code, output, context) {
     if (!output && il_value.ctype.compatible(ctype)) {
         return il_value
     } else if (!output && il_value.literal) {
-        output = new il.IValue(ctype)
+        output = new IValue(ctype)
         let val = il_value.literal.val
         if (ctype.is_integral) {
             val = shift_into_range(il_value.literal.val, ctype)
@@ -180,7 +177,7 @@ function set_type(il_value, ctype, il_code, output, context) {
         return il_value
     } else {
         if (!output) {
-            output = new il.IValue(ctype)
+            output = new IValue(ctype)
         }
         //il_code.add(value_ops.Set(output, il_value))
         return output
@@ -206,4 +203,4 @@ function shift_into_range(val, ctype) {
     return val
 }
 
-exports.LValue = LValue
+export { LValue }

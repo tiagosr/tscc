@@ -1,11 +1,8 @@
-const locations = require("./locations")
-const il = require("./il")
-const Loc = locations.Loc
-const LiteralValueLoc = locations.LiteralValueLoc
-const MemLoc = locations.MemLoc
-const NotImplementedError = require("../errors").NotImplementedError
+import { Loc, LiteralValueLoc, MemLoc } from "./locations.js"
+import { IOp, RelLocConflict } from "./il.js"
+import { NotImplementedError } from "../errors.js"
 
-class GeneralCmp extends il.IOp {
+class GeneralCmp extends IOp {
 
     /**
      * 
@@ -21,7 +18,7 @@ class GeneralCmp extends il.IOp {
     }
     get inputs() { return [this.arg1, this.arg2] }
     get outputs() { return [this.output] }
-    get rel_spot_conflicts() { return new il.RelLocConflict(this.output, [this.arg1, this.arg2]) }
+    get rel_spot_conflicts() { return new RelLocConflict(this.output, [this.arg1, this.arg2]) }
 }
 
 class NotEqualCmp extends GeneralCmp {}
@@ -31,10 +28,5 @@ class GreaterCmp extends GeneralCmp { }
 class LessOrEqCmp extends GeneralCmp { }
 class GreaterOrEqCmp extends GeneralCmp { }
 
-exports.NotEqualCmp = NotEqualCmp
-exports.EqualCmp = EqualCmp
-exports.LessCmp = LessCmp
-exports.GreaterCmp = GreaterCmp
-exports.LessOrEqCmp = LessOrEqCmp
-exports.GreaterOrEqCmp = GreaterOrEqCmp
+export { NotEqualCmp, EqualCmp, LessCmp, GreaterCmp, LessOrEqCmp, GreaterOrEqCmp }
 

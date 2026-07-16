@@ -1,9 +1,8 @@
-const locations = require("./locations")
-const il = require("./il")
-const LiteralValueLoc = locations.LiteralValueLoc
-const NotImplementedError = require("../errors").NotImplementedError
+import { LiteralValueLoc } from "./locations.js"
+import { IOp } from "./il.js"
+import { NotImplementedError } from "../errors.js"
 
-exports.Label = class Label extends il.IOp {
+export class Label extends IOp {
     /**
      * Label - maps to an assembler label
      * @param {string} label 
@@ -17,7 +16,7 @@ exports.Label = class Label extends il.IOp {
     get label_name() { return this.label }
 }
 
-exports.Jump = class Jump extends il.IOp {
+export class Jump extends IOp {
     constructor(label) {
         super()
         this.label = label
@@ -27,7 +26,7 @@ exports.Jump = class Jump extends il.IOp {
     get targets() { return [this.label,] }
 }
 
-class ConditionalJump extends il.IOp {
+class ConditionalJump extends IOp {
 
     /**
      * 
@@ -44,15 +43,15 @@ class ConditionalJump extends il.IOp {
     get targets() { return [this.label,] }
 }
 
-exports.JumpZero = class JumpZero extends ConditionalJump {
+export class JumpZero extends ConditionalJump {
 
 }
 
-exports.JumpNotZero = class JumpNotZero extends ConditionalJump {
+export class JumpNotZero extends ConditionalJump {
 
 }
 
-exports.Return = class Return extends il.IOp {
+export class Return extends IOp {
     /**
      * 
      * @param {?il.IValue} arg 

@@ -1,8 +1,8 @@
-const ctypes = require("../ctypes")
-const NotImplementedError = require("../errors").NotImplementedError
-const CompilerContext = require("../context").CompilerContext
-const control_ops = require("./control")
-const locs = require("./locations")
+import { unsigned_char_max, unsigned_short_max } from "../ctypes.js"
+import { NotImplementedError } from "../errors.js"
+import { CompilerContext } from "../context.js"
+import { Return } from "./control.js"
+import { LiteralValueLoc } from "./locations.js"
 
 class ILContext {
 
@@ -50,7 +50,7 @@ class ILContext {
     get always_returns() {
         let cur_func_ops = this.ops[this.cur_func]
         if (cur_func_ops) {
-            if (cur_func_ops[cur_func_ops.length-1] instanceof control_ops.Return) {
+            if (cur_func_ops[cur_func_ops.length-1] instanceof Return) {
                 return true
             }
         }
@@ -158,13 +158,13 @@ class IOp {
         throw new NotImplementedError()
     }
     is_imm(loc) {
-        return (loc instanceof locs.LiteralValueLoc)
+        return (loc instanceof LiteralValueLoc)
     }
     is_imm8(loc) {
-        return this.is_imm(loc) && parseInt(loc.detail) < ctypes.unsigned_char_max
+        return this.is_imm(loc) && parseInt(loc.detail) < unsigned_char_max
     }
     is_imm16(loc) {
-        return this.is_imm(loc) && parseInt(loc.detail) < ctypes.unsigned_short_max
+        return this.is_imm(loc) && parseInt(loc.detail) < unsigned_short_max
     }
 }
 
@@ -180,15 +180,8 @@ class RelLocConflict {
     }
 }
 
-exports.ILContext = ILContext
-exports.IValue = IValue
-exports.IOp = IOp
-
-exports.IntegerLiteral = IntegerLiteral
-exports.StringLiteral = StringLiteral
-exports.SymbolTable = SymbolTable
-exports.SymbolTableDefinitionStatus = SymbolTableDefinitionStatus
-exports.SymbolTableLinkage = SymbolTableLinkage
-exports.SymbolTableStorageDuration = SymbolTableStorageDuration
-
-exports.RelLocConflict = RelLocConflict
+export { 
+    ILContext, IValue, IOp, IntegerLiteral, StringLiteral, 
+    SymbolTable, SymbolTableDefinitionStatus, SymbolTableLinkage, SymbolTableStorageDuration,
+    RelLocConflict
+}

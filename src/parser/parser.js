@@ -1,19 +1,8 @@
-const p = require("./utils")
-const nodes = require("../ast/nodes")
-const tokens = require("../tokens")
-const token_kinds = require("../token_kinds")
-const Token = tokens.Token
-const TokenKind = tokens.TokenKind
-const ParserError = p.ParserError
-const SimpleSymbolTable = p.SimpleSymbolTable
-const AT = p.AT
-const GOT = p.GOT
-const AFTER = p.AFTER
-const deepcopy = require("deepcopy")
-const format = require("string-format")
-
-
-
+import { ParserError, SimpleSymbolTable, AT, GOT, AFTER } from "./utils.js"
+import { EmptyStatement, ExprStatement } from "../ast/nodes.js"
+import { Token, TokenKind } from "../tokens.js"
+import { semicolon } from "../token_kinds.js"
+import format from "string-format"
 
 class NodeIndexPair {
     /**
@@ -92,7 +81,7 @@ class ParserContext {
      */
     memoize(to_try, on_failure) {
         /** @type {SimpleSymbolTable} */
-        let symbols_bak = deepcopy(this.symbols)
+        let symbols_bak = structuredClone(this.symbols)
         try {
             return to_try()
         } catch (e) {
@@ -169,12 +158,12 @@ class ParserContext {
 
     parse_expr_statement(index) {
         return this.with_range(()=> {
-            if (this.token_is(index, token_kinds.semicolon)) {
-                return new NodeIndexPair(nodes.EmptyStatement(), index + 1)
+            if (this.token_is(index, semicolon)) {
+                return new NodeIndexPair(EmptyStatement(), index + 1)
             }
             let expr = this.parse_expression(index)
-            expr.index = this.match_token(index, token_kinds.semicolon, AFTER)
-            return new NodeIndexPair(nodes.ExprStatement(expr.node), index)
+            expr.index = this.match_token(index, semicolon, AFTER)
+            return new NodeIndexPair(ExprStatement(expr.node), index)
         })(index)
     }
     
@@ -191,4 +180,4 @@ function parse(tokens, context) {
     return null
 }
 
-exports.parse = parse
+export { parse }

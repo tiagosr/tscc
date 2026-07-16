@@ -1,7 +1,7 @@
-const CompilationTarget = require("../../src/target").CompilationTarget
+import { CompilationTarget } from "../../src/target.js"
 
 class M68KTarget extends CompilationTarget {
 
 }
 
-exports.target = M68KTarget
+export { M68KTarget as Target }

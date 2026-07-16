@@ -1,8 +1,7 @@
-const StreamRange = require("../utils").StreamRange
-const CompilerError = require("../errors").CompilerError
+import { StreamRange } from "../utils.js"
+import { CompilerError } from "../errors.js"
 
-const control_ops = require("../il/control")
-const il = require("../il/il")
+import { Jump } from "../il/control.js"
 
 
 class Node {
@@ -75,7 +74,7 @@ class BreakContinue extends Node {
     make_il(il_context, symbol_table, c) {
         let label = this.get_label(c)
         if (label) {
-            il_context.add(control_ops.Jump(label))
+            il_context.add(Jump(label))
         } else {
             throw new CompilerError(this.description+" statement not in a loop", this.r)
         }
@@ -123,12 +122,4 @@ class IfStatement extends Node {
     }
 }
 
-exports.Node = Node
-exports.Root = Root
-exports.Compound = Compound
-exports.Return = Return
-exports.Break = Break
-exports.Continue = Continue
-exports.EmptyStatement = EmptyStatement
-exports.ExprStatement = ExprStatement
-exports.IfStatement = IfStatement
+export { Node, Root, Compound, Return, Break, Continue, EmptyStatement, ExprStatement, IfStatement }

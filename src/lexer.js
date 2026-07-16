@@ -1,13 +1,13 @@
-const CompilerContext = require("./context").CompilerContext
-const utils = require("./utils")
-const StreamRange = utils.StreamRange
-const StreamPosition = utils.StreamPosition
-const CompilerError = require("./errors").CompilerError
-const tokens = require("./tokens")
-const Token = tokens.Token
-const TokenKind = tokens.TokenKind
-const token_kinds = require("./token_kinds")
-const format = require("string-format")
+import { CompilerContext } from "./context.js"
+import { StreamRange, StreamPosition } from "./utils.js"
+import { CompilerError } from "./errors.js"
+import { Token, TokenKind } from "./tokens.js"
+import { 
+    number, identifier, star, slash, 
+    include_file, dquote, squote, char_string, 
+    string, symbol_kinds, pound, keyword_kinds
+} from "./token_kinds.js"
+import format from "string-format"
 
 format.extend(String.prototype, {})
 
@@ -115,11 +115,11 @@ function chunk_to_tokens(chunk) {
         }
         const number_string = match_number_string(chunk)
         if (number_string) {
-            return [new Token(token_kinds.number, number_string, null, range), ]
+            return [new Token(number, number_string, null, range), ]
         }
         const identifier_name = match_identifier_name(chunk)
         if (identifier_name) {
-            return [new Token(token_kinds.identifier, identifier_name, null, range), ]
+            return [new Token(identifier, identifier_name, null, range), ]
         }
         throw new CompilerError("unrecognized token at {chk}".format({
             chk: chunk_to_string(chunk)
@@ -166,7 +166,7 @@ function tokenize_line(line, in_comment, context) {
         }
         if (in_comment) {
             // see if we can exit the comment block
-            if (symbol_kind == token_kinds.star && next == token_kinds.slash) {
+            if (symbol_kind == star && next == slash) {
                 in_comment = false
                 chunk_start = chunk_end + 2
                 chunk_end = chunk_start
@@ -175,11 +175,11 @@ function tokenize_line(line, in_comment, context) {
                 chunk_start = chunk_end + 1
                 chunk_end = chunk_start
             }
-        } else if (symbol_kind == token_kinds.slash && next == token_kinds.star) {
+        } else if (symbol_kind == slash && next == star) {
             // we just started a comment
             tokens = tokens.concat(chunk_to_tokens(line.slice(chunk_start, chunk_end)))
             in_comment = true
-        } else if (symbol_kind == token_kinds.slash && next == token_kinds.slash) {
+        } else if (symbol_kind == slash && next == slash) {
             // two slashes is a comment //
             // drop everything til the end of the line
             break
@@ -193,27 +193,27 @@ function tokenize_line(line, in_comment, context) {
                 throw new CompilerError("extra tokens at the end of #include directive")
             }
             let {filename, end} = read_include_filename(line, chunk_end)
-            tokens = [...tokens, new Token(token_kinds.include_file, filename, null, 
+            tokens = [...tokens, new Token(include_file, filename, null, 
                 new StreamRange(line[chunk_end].p, line[end].p))]
             chunk_start = end + 1
             chunk_end = chunk_start
             seen_filename = true
-        } else if ([token_kinds.dquote, token_kinds.squote].includes(symbol_kind)) {
+        } else if ([dquote, squote].includes(symbol_kind)) {
             let quote_str = "'"
-            let kind = token_kinds.char_string
+            let kind = char_string
             let add_null = false
-            if (symbol_kind == token_kinds.dquote) {
+            if (symbol_kind == dquote) {
                 quote_str = "\""
-                kind = token_kinds.string
+                kind = string
                 add_null = true
             }
             let {chars, length:end} = read_string(line, chunk_end + 1, quote_str, add_null)
             let rep = chunk_to_string(line.slice(chunk_end, end+1))
             let r = new StreamRange(line[chunk_end].p, line[end].p)
 
-            if ((kind == token_kinds.char_string) && (chars.length == 0)) {
+            if ((kind == char_string) && (chars.length == 0)) {
                 // emit error message to say char string is empty
-            } else if ((kind == token_kinds.char_string) && (chars.length > 1)) {
+            } else if ((kind == char_string) && (chars.length > 1)) {
                 // emit error message to say char string is too big
             } else {
                 tokens.push(new Token(kind, chars, rep, r))
@@ -272,7 +272,7 @@ function chunk_to_string(chunk) {
  */
 function match_symbol_kind_at(content, start) {
     let best = null
-    for (const symbol_kind of token_kinds.symbol_kinds) {
+    for (const symbol_kind of symbol_kinds) {
         if (content.length - start < symbol_kind.text_repr.length) {
             continue // not enough characters remaining for a full match
         }
@@ -297,8 +297,8 @@ function match_symbol_kind_at(content, start) {
  */
 function match_include_command(tokens) {
     return ((tokens.length == 2) &&
-        tokens[0].kind == token_kinds.pound &&
-        tokens[1].kind == token_kinds.identifier &&
+        tokens[0].kind == pound &&
+        tokens[1].kind == identifier &&
         tokens[1].content == "include")
 }
 
@@ -446,7 +446,7 @@ function read_include_filename(line, start) {
  */
 function match_keyword_kind(chunk) {
     const token_str = chunk_to_string(chunk)
-    for (const keyword_kind of token_kinds.keyword_kinds) {
+    for (const keyword_kind of keyword_kinds) {
         if (keyword_kind.text_repr == token_str) {
             return keyword_kind
         }
@@ -481,5 +481,4 @@ function match_identifier_name(chunk) {
     return null
 }
 
-exports.Tagged = Tagged
-exports.tokenize = tokenize
+export { Tagged, tokenize }

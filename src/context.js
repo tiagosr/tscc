@@ -1,6 +1,6 @@
-const CompilerError = require("./errors").CompilerError
-const CompilationTarget = require("./target").CompilationTarget
-const Console = require("console").Console
+import { CompilerError } from "./errors.js"
+import { CompilationTarget } from "./target.js"
+import { Console } from "console"
 
 class Config {
     /**
@@ -89,6 +89,4 @@ class CompilerContext extends Context {
 }
 
 
-exports.Config = Config
-exports.PreprocessorContext = PreprocessorContext
-exports.CompilerContext = CompilerContext
+export { Config, PreprocessorContext, CompilerContext }

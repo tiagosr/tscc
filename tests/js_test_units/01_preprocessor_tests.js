@@ -1,0 +1,150 @@
+import assert from "node:assert/strict"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
+
+import { tokenize } from "../../src/lexer.js"
+import { process as preprocess } from "../../src/preprocessor.js"
+import { Config, PreprocessorContext } from "../../src/context.js"
+import { Token, ErrorToken } from "../../src/tokens.js"
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const fixtures_dir = path.join(__dirname, "fixtures")
+
+/**
+ * @param {?string[]} sys_include_paths
+ * @param {Object.<string, Token[]>} defines
+ */
+function make_context(sys_include_paths = [], defines = {}) {
+    const config = new Config(fixtures_dir, true)
+    config.sys_include_paths = sys_include_paths
+    return new PreprocessorContext(config, defines)
+}
+
+/**
+ * Tokenize and preprocess a snippet of source as if it were `filename`.
+ * @param {string} source
+ * @param {string} filename
+ * @param {PreprocessorContext} context
+ */
+function preprocess_source(source, filename, context) {
+    const tokens = tokenize(source, filename, context)
+    return preprocess(tokens, filename, context)
+}
+
+/** @param {Token[]} tokens */
+function contents(tokens) {
+    return tokens.map((token) => token.content)
+}
+
+describe("preprocessor", function() {
+
+    describe("passthrough", function() {
+        it("leaves source with no directives or macros untouched", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("int main() { return 0; }", filename, context)
+            assert.deepEqual(
+                contents(result),
+                ["int", "main", "(", ")", "{", "return", "0", ";", "}"]
+            )
+        })
+    })
+
+    describe("#define", function() {
+        it("removes the directive line and substitutes later uses of the macro", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define FOO 42\nFOO", filename, context)
+            assert.deepEqual(contents(result), ["42"])
+        })
+
+        it("substitutes every token from the macro body", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define GREETING hello world\nGREETING", filename, context)
+            assert.deepEqual(contents(result), ["hello", "world"])
+        })
+
+        it("does not disturb surrounding code on other lines", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("int x;\n#define VALUE 10\nint y = VALUE;", filename, context)
+            assert.deepEqual(
+                contents(result),
+                ["int", "x", ";", "int", "y", "=", "10", ";"]
+            )
+        })
+
+        it("lets a later #define override an earlier one with the same name", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define FOO 1\n#define FOO 2\nFOO", filename, context)
+            assert.deepEqual(contents(result), ["2"])
+        })
+
+        it.skip("recursively expands a macro referenced from another macro's body", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define A 1\n#define B A\nB", filename, context)
+            assert.deepEqual(contents(result), ["1"])
+        })
+
+        // Known limitation, tracked by the "TODO test the parameters working correctly" /
+        // "TODO flesh out" comments in src/preprocessor.js: process_define() records a
+        // function-like macro's parameter names but nothing ever binds call-site arguments
+        // to them, and substitute_defined() only consumes the macro name token (not the
+        // argument list). Re-enable once parameter substitution is implemented.
+        it.skip("substitutes macro parameters at the call site", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define ADD(a, b) a + b\nADD(1, 2)", filename, context)
+            assert.deepEqual(contents(result), ["1", "+", "2"])
+        })
+    })
+
+    describe("__FILE__", function() {
+        it("expands to the path of the file being processed", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("__FILE__", filename, context)
+            assert.deepEqual(contents(result), [filename])
+        })
+    })
+
+    describe("#include", function() {
+        it("splices in the tokens produced by the included file", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#include \"include_target.h\"", filename, context)
+            assert.deepEqual(
+                contents(result),
+                ["int", "included_value", "=", "42", ";"]
+            )
+        })
+
+        it("resolves angle-bracket includes against the configured system include paths", function() {
+            const context = make_context([path.join(fixtures_dir, "sys")])
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#include <sys_header.h>\nSYS_MACRO", filename, context)
+            assert.deepEqual(contents(result), ["7"])
+        })
+
+        it("emits an error token when the included file cannot be found", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#include \"does_not_exist.h\"", filename, context)
+            assert.equal(result.length, 1)
+            assert.ok(result[0] instanceof ErrorToken)
+            assert.equal(result[0].kind.text_repr, "include error")
+            assert.equal(result[0].content, "\"does_not_exist.h\"")
+        })
+    })
+
+    // #if / #ifdef are not implemented yet (see the bare "// TODO" branches in
+    // process()): matching one of these directives currently leaves the loop index
+    // untouched, which would spin forever, so these stay skipped rather than exercised.
+    describe("#if / #ifdef", function() {
+        it.skip("skips the body of a false #if block")
+        it.skip("keeps the body of a true #ifdef block")
+    })
+})

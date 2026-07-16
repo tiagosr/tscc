@@ -1,3 +1,3 @@
-const il = require("../../src/il/il")
-const target = require("../../src/target")
+import il from "../../src/il/il.js"
+import target from "../../src/target.js"
 

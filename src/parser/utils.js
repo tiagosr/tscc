@@ -1,15 +1,8 @@
-const utils = require("../utils")
-const StreamRange = utils.StreamRange
-const StreamPosition = utils.StreamPosition
-const errors = require("../errors")
-const CompilerError = errors.CompilerError
-const NotImplementedError = errors.NotImplementedError
-const CompilerContext = require("../context").CompilerContext
-const nodes = require("../ast/nodes")
-const tokens = require("../tokens")
-const Token = tokens.Token
-const TokenKind = tokens.TokenKind
-const format = require("string-format")
+import { StreamRange, StreamPosition } from "../utils.js"
+import { CompilerError, NotImplementedError } from "../errors.js"
+import { CompilerContext } from "../context.js"
+import { Token, TokenKind } from "../tokens.js"
+import format from "string-format"
 
 const AT = 1
 const AFTER = 2
@@ -84,8 +77,4 @@ class SimpleSymbolTable {
     }
 }
 
-exports.AT = AT
-exports.AFTER = AFTER
-exports.GOT = GOT
-exports.SimpleSymbolTable = SimpleSymbolTable
-exports.ParserError = ParserError
+export { AT, AFTER, GOT, SimpleSymbolTable, ParserError }

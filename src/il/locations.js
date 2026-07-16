@@ -68,8 +68,4 @@ class LiteralValueLoc extends Loc {
     }
 }
 
-exports.Loc = Loc
-exports.RegLoc = RegLoc
-exports.MemLoc = MemLoc
-exports.BaseRegMemLoc = BaseRegMemLoc
-exports.LiteralValueLoc = LiteralValueLoc
+export { Loc, RegLoc, MemLoc, BaseRegMemLoc, LiteralValueLoc }

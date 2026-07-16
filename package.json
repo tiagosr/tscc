@@ -2,10 +2,11 @@
   "name": "tscc",
   "version": "0.1.0",
   "description": "Tiny Script-driven C Compiler",
+  "type": "module",
   "main": "src/main.js",
   "scripts": {
     "cc": "node src/main.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "mocha tests/js_test_units/**/*.js"
   },
   "repository": {
     "type": "git",
@@ -23,12 +24,15 @@
   },
   "homepage": "https://github.com/tiagosr/tscc",
   "devDependencies": {
-    "eslint": "^5.3.0"
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.7.0",
+    "globals": "^17.7.0",
+    "mocha": "^11.3.0"
   },
   "dependencies": {
-    "argparse": "^1.0.10",
-    "deepcopy": "^1.0.0",
-    "dependency-graph": "^0.7.1",
+    "argparse": "^3.0.0",
+    "dependency-graph": "^1.0.0",
+    "diff": "^9.0.0",
     "string-format": "^2.0.0"
   }
 }

@@ -1,4 +1,4 @@
-const StreamRange = require("./utils").StreamRange
+import { StreamRange } from "./utils.js"
 
 class TokenKind {
     /**
@@ -53,6 +53,4 @@ class ErrorToken extends Token {
     
 }
 
-exports.TokenKind = TokenKind
-exports.Token = Token
-exports.ErrorToken = ErrorToken
+export { TokenKind, Token, ErrorToken }

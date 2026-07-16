@@ -1,14 +1,10 @@
-const StreamRange = require("./utils")
-const _context = require("./context")
-const Config = _context.Config
-const CompilerContext = _context.CompilerContext
-const tokens = require("./tokens")
-const Token = tokens.Token, ErrorToken = tokens.ErrorToken, TokenKind = tokens.TokenKind
-const lexer = require("./lexer")
-const token_kinds = require("./token_kinds")
-const path = require("path")
-const fs = require("fs")
-const CompilerError = require("./errors").CompilerError
+import { Config, CompilerContext } from "./context.js"
+import { Token, ErrorToken, TokenKind } from "./tokens.js"
+import { tokenize } from "./lexer.js"
+import { pound, identifier as _identifier, open_paren, close_paren, ellipsis, comma, include_file, define_placeholder, string } from "./token_kinds.js"
+import { resolve } from "path"
+import { existsSync, readFileSync } from "fs"
+import { CompilerError } from "./errors.js"
 
 class PreprocessItemResult {
     /**
@@ -59,10 +55,10 @@ class PreprocessorDefine {
  */
 function match_define(tokens, index) {
     return (
-        tokens[index].kind == token_kinds.pound &&
-        tokens[index + 1].kind == token_kinds.identifier &&
+        tokens[index].kind == pound &&
+        tokens[index + 1].kind == _identifier &&
         tokens[index + 1].content == "define" &&
-        tokens[index + 2].kind == token_kinds.identifier
+        tokens[index + 2].kind == _identifier
     )
 }
 
@@ -80,7 +76,7 @@ function process_define(tokens, index, context) {
     let params = null
     let variadic = -1
 
-    if (tokens[i].kind == token_kinds.open_paren &&               // there is an open paren
+    if (tokens[i].kind == open_paren &&               // there is an open paren
         tokens[i-1].r.end.line == tokens[i].r.start.line &&       // in the same line
         tokens[i-1].r.end.column == tokens[i].r.start.column - 1) // and no space between the identifier and paren
     {
@@ -90,19 +86,19 @@ function process_define(tokens, index, context) {
         for ( ;
             i < tokens.length &&
             tokens[i].r.start.line == current_line &&
-            tokens[i].kind != token_kinds.close_paren;
+            tokens[i].kind != close_paren;
             i++)
         {
-            if (tokens[i].kind == token_kinds.ellipsis) { // variadic parameter
+            if (tokens[i].kind == ellipsis) { // variadic parameter
                 if (variadic >= 0) {
                     // TODO: throw preprocessor error (multiple variadic arguments)
                 } else {
                     params.push(tokens[i].content)
                     variadic = params.length - 1
                 }
-            } else if (tokens[i].kind == token_kinds.identifier) {
+            } else if (tokens[i].kind == _identifier) {
                 params.push(tokens[i].content)
-                if (tokens[i+1].kind == token_kinds.comma) {
+                if (tokens[i+1].kind == comma) {
                     i++
                 }
             } else {
@@ -131,8 +127,8 @@ function process_define(tokens, index, context) {
  */
 function match_if(tokens, index) {
     return (
-        tokens[index].kind == token_kinds.pound &&
-        tokens[index + 1].kind == token_kinds.identifier &&
+        tokens[index].kind == pound &&
+        tokens[index + 1].kind == _identifier &&
         tokens[index + 1].content == "if"
     )
 }
@@ -145,10 +141,10 @@ function match_if(tokens, index) {
  */
 function match_ifdef(tokens, index) {
     return (
-        tokens[index].kind == token_kinds.pound &&
-        tokens[index + 1].kind == token_kinds.identifier &&
+        tokens[index].kind == pound &&
+        tokens[index + 1].kind == _identifier &&
         tokens[index + 1].content == "ifdef" &&
-        tokens[index + 2].kind == token_kinds.identifier
+        tokens[index + 2].kind == _identifier
     )
 }
 
@@ -162,10 +158,10 @@ function match_ifdef(tokens, index) {
  */
 function match_include(tokens, index) {
     return (
-        tokens[index].kind == token_kinds.pound &&
-        tokens[index + 1].kind == token_kinds.identifier &&
+        tokens[index].kind == pound &&
+        tokens[index + 1].kind == _identifier &&
         tokens[index + 1].content == "include" &&
-        tokens[index + 2].kind == token_kinds.include_file
+        tokens[index + 2].kind == include_file
     )
 }
 
@@ -182,7 +178,7 @@ const include_error_kind = new TokenKind("include error")
 function process_include(tokens, index, this_file, context) {
     try {
         let { file, filename } = read_file(tokens[index + 2], this_file, context.config)
-        let new_tokens = process(lexer.tokenize(file, filename, context), filename, context)
+        let new_tokens = process(tokenize(file, filename, context), filename, context)
         return new PreprocessItemResult(new_tokens, 3)
     } catch (e) {
         if (e instanceof CompilerError) {
@@ -211,15 +207,15 @@ function process_include(tokens, index, this_file, context) {
  */
 function read_file(include_file_token, this_file, config) {
     const include_file_n = include_file_token.content.slice(1, -1)
-    let file_paths = [path.resolve(this_file, "..", include_file_n),]
+    let file_paths = [resolve(this_file, "..", include_file_n),]
     if (include_file_token.content[0] == "<") {
         file_paths = config.sys_include_paths.map(function(include_path) {
-            return path.resolve(include_path, include_file_n)
+            return resolve(include_path, include_file_n)
         })
     }
     for (const include of file_paths) {
-        if (fs.existsSync(include)) {
-            return new ReadFileResult(fs.readFileSync(include).toString(), include)
+        if (existsSync(include)) {
+            return new ReadFileResult(readFileSync(include).toString(), include)
         }
     }
     throw new CompilerError("Include file not found", include_file_token.r)
@@ -250,7 +246,7 @@ function substitute_defined(tokens, index, defines, context) {
     let substitute_tokens = []
     // co
     for (const token of defines[tokens[index].content].body) {
-        if (token.kind == token_kinds.define_placeholder) {
+        if (token.kind == define_placeholder) {
             for (const substitute of substitute_tokens[token.content]) {
                 new_tokens.push(substitute)
             }
@@ -272,7 +268,7 @@ function process(tokens, this_file, context) {
     /** @type {Token[]} */
     let processed = []
     let i = 0
-    let this_file_token = new Token(token_kinds.string, this_file)
+    let this_file_token = new Token(string, this_file)
     context.defines["__FILE__"] = new PreprocessorDefine("__FILE__", null, [this_file_token, ], -1)
     while (i < tokens.length) {
         if (match_include(tokens, i)) {
@@ -302,4 +298,4 @@ function process(tokens, this_file, context) {
     return processed.concat(tokens.slice(i))
 }
 
-exports.process = process
+export { process }

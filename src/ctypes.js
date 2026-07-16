@@ -1,5 +1,5 @@
-const token_kinds = require("./token_kinds")
-const NotImplementedError = require("./errors").NotImplementedError
+import { void_kw, bool_kw, char_kw, short_kw, int_kw, long_kw } from "./token_kinds.js"
+import { NotImplementedError } from "./errors.js"
 
 class CType {
     /**
@@ -245,44 +245,37 @@ class UnionCType extends UnionStructCType {
 }
 
 
-exports.CType = CType
-exports.VoidCType = VoidCType
-exports.IntegerCType = IntegerCType
-exports.PointerCType = PointerCType
-exports.FunctionCType = FunctionCType
-exports.UnionStructCType = UnionStructCType
-exports.StructCType = StructCType
-exports.UnionCType = UnionCType
+export { CType, VoidCType, IntegerCType, PointerCType, FunctionCType, UnionStructCType, StructCType, UnionCType }
 
 
-exports.void_t = new VoidCType()
-exports.bool_t = new IntegerCType(1, false)
-exports.bool_t._bool = true
+export const void_t = new VoidCType()
+export const bool_t = new IntegerCType(1, false)
+bool_t._bool = true
 
-exports.char_t = new IntegerCType(1, true)
-exports.unsigned_char_t = new IntegerCType(1, false)
-exports.unsigned_char_max = 255
+export const char_t = new IntegerCType(1, true)
+export const unsigned_char_t = new IntegerCType(1, false)
+export const unsigned_char_max = 255
 
-exports.short_t = new IntegerCType(2, true)
-exports.unsigned_short_t = new IntegerCType(2, false)
-exports.unsigned_short_max = 65535
+export const short_t = new IntegerCType(2, true)
+export const unsigned_short_t = new IntegerCType(2, false)
+export const unsigned_short_max = 65535
 
-exports.int_t = new IntegerCType(4, true)
-exports.unsigned_int_t = new IntegerCType(4, false)
-exports.int_max = 2147483647
-exports.int_min = -2147483648
+export const int_t = new IntegerCType(4, true)
+export const unsigned_int_t = new IntegerCType(4, false)
+export const int_max = 2147483647
+export const int_min = -2147483648
 
-exports.long_t = new IntegerCType(8, true)
-exports.unsigned_long_t = new IntegerCType(8, false)
-exports.int_max = 9223372036854775807
-exports.int_min = -9223372036854775808
+export const long_t = new IntegerCType(8, true)
+export const unsigned_long_t = new IntegerCType(8, false)
+export const long_max = 9223372036854775807
+export const long_min = -9223372036854775808
 
 
-exports.simple_types = {
-    [token_kinds.void_kw]: exports.void_t,
-    [token_kinds.bool_kw]: exports.bool_t,
-    [token_kinds.char_kw]: exports.char_t,
-    [token_kinds.short_kw]: exports.short_t,
-    [token_kinds.int_kw]: exports.int_t,
-    [token_kinds.long_kw]: exports.long_t
+export const simple_types = {
+    [void_kw]: void_t,
+    [bool_kw]: bool_t,
+    [char_kw]: char_t,
+    [short_kw]: short_t,
+    [int_kw]: int_t,
+    [long_kw]: long_t
 }
