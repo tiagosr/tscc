@@ -133,6 +133,23 @@ function match_if(tokens, index) {
     )
 }
 
+
+/**
+ * 
+ * @param {Token[]} tokens 
+ * @param {number} index 
+ * @param {CompilerContext} context 
+ * @returns {PreprocessItemResult}
+ */
+function process_if(tokens, index, context) {
+    if (tokens[index + 2].content == "1") {
+
+        return new PreprocessItemResult()
+    } else {
+        return new PreprocessItemResult()
+    }
+}
+
 /**
  * 
  * @param {Token[]} tokens 
@@ -240,11 +257,12 @@ function match_defined_symbols(tokens, index, defines) {
  * @returns {?PreprocessItemResult}
  */
 function substitute_defined(tokens, index, defines, context) {
+    /** @type {Token[]} */
     let new_tokens = []
     let consumed_tokens = 1
     /** @type {Token[][]} */
     let substitute_tokens = []
-    // co
+    // apply the substitution (recursively)
     for (const token of defines[tokens[index].content].body) {
         if (token.kind == define_placeholder) {
             for (const substitute of substitute_tokens[token.content]) {
@@ -252,6 +270,14 @@ function substitute_defined(tokens, index, defines, context) {
             }
         } else {
             new_tokens.push(token)
+        }
+    }
+    let definesPaintedBlue = {...defines}
+    delete definesPaintedBlue[tokens[index].content]
+    for (let i = 0; i < new_tokens.length; i++) {
+        if (match_defined_symbols(new_tokens, i, definesPaintedBlue)) {
+            let repeat = substitute_defined(new_tokens, i, definesPaintedBlue);
+            new_tokens = [...new_tokens.slice(0, i), ...repeat.tokens, ...new_tokens.slice(i+1)];
         }
     }
     return new PreprocessItemResult(new_tokens, consumed_tokens)

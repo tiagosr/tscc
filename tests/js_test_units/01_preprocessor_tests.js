@@ -82,11 +82,32 @@ describe("preprocessor", function() {
             assert.deepEqual(contents(result), ["2"])
         })
 
-        it.skip("recursively expands a macro referenced from another macro's body", function() {
+        it("recursively expands a macro referenced from another macro's body", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("#define A 1\n#define B A\nB", filename, context)
             assert.deepEqual(contents(result), ["1"])
+        })
+
+        it("correctly fails to expand a macro referenced from a future macro's body", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define B A\nB\n#define A 1\n", filename, context)
+            assert.deepEqual(contents(result), ["A"])
+        })
+
+        it("correctly fails to infinitely loop on definitions", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define B B\nB\n", filename, context)
+            assert.deepEqual(contents(result), ["B"])
+        })
+
+        it("correctly fails to infinitely loop on cyclical definitions", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define B A\n#define A B\nB\n", filename, context)
+            assert.deepEqual(contents(result), ["B"])
         })
 
         // Known limitation, tracked by the "TODO test the parameters working correctly" /
@@ -144,7 +165,19 @@ describe("preprocessor", function() {
     // process()): matching one of these directives currently leaves the loop index
     // untouched, which would spin forever, so these stay skipped rather than exercised.
     describe("#if / #ifdef", function() {
-        it.skip("skips the body of a false #if block")
-        it.skip("keeps the body of a true #ifdef block")
+        it.skip("skips the body of a false #if block", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#if 0\nHELLO;\n#endif", filename, context)
+            assert.equal(result.length, 0)
+            assert.deepEqual(contents(result), [])
+        })
+        it.skip("keeps the body of a true #ifdef block", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#if 1\nHELLO;\n#endif", filename, context)
+            assert.equal(result.length, 2)
+            assert.deepEqual(contents(result), ["HELLO", ";"])
+        })
     })
 })
