@@ -271,22 +271,23 @@ function chunk_to_string(chunk) {
  * @returns {?TokenKind}
  */
 function match_symbol_kind_at(content, start) {
+    let best = null
     for (const symbol_kind of token_kinds.symbol_kinds) {
-        try {
-            let found = true
-            let smallest = Math.min(content.length-start, symbol_kind.text_repr.length)
-            for (let i = 0; i < smallest; i++) {
-                if (content[start+i].c != symbol_kind.text_repr[i]) {
-                    found = false
-                }
-            }
-            if (found) return symbol_kind
-        } catch (error) {
-            if (!(error instanceof RangeError)) {
-                throw error
+        if (content.length - start < symbol_kind.text_repr.length) {
+            continue // not enough characters remaining for a full match
+        }
+        let found = true
+        for (let i = 0; i < symbol_kind.text_repr.length; i++) {
+            if (content[start+i].c != symbol_kind.text_repr[i]) {
+                found = false
+                break
             }
         }
+        if (found && (!best || symbol_kind.text_repr.length > best.text_repr.length)) {
+            best = symbol_kind
+        }
     }
+    return best
 }
 
 /**

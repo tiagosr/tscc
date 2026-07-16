@@ -99,6 +99,7 @@ exports.comma = new TokenKind(",", symbol_kinds)
 exports.semicolon = new TokenKind(";", symbol_kinds)
 exports.dot = new TokenKind(".", symbol_kinds)
 exports.arrow = new TokenKind("->", symbol_kinds)
+exports.ellipsis = new TokenKind("...", symbol_kinds)
 
 exports.identifier = new TokenKind()
 exports.number = new TokenKind()

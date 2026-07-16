@@ -34,6 +34,23 @@ class ReadFileResult {
     }
 }
 
+class PreprocessorDefine {
+
+    /**
+     * 
+     * @param {string} identifier 
+     * @param {?string[]} parameters 
+     * @param {Token[]} body 
+     * @param {number} variadic 
+     */
+    constructor(identifier, parameters, body, variadic) {
+        this.identifier = identifier
+        this.parameters = parameters
+        this.body = body
+        this.variadic = variadic || -1
+    }
+}
+
 /**
  * 
  * @param {Token[]} tokens 
@@ -57,7 +74,53 @@ function match_define(tokens, index) {
  * @returns {PreprocessItemResult}
  */
 function process_define(tokens, index, context) {
+    let body = []
+    let current_line = tokens[index + 2].r.start.line
+    let i = index + 3
+    let params = null
+    let variadic = -1
 
+    if (tokens[i].kind == token_kinds.open_paren &&               // there is an open paren
+        tokens[i-1].r.end.line == tokens[i].r.start.line &&       // in the same line
+        tokens[i-1].r.end.column == tokens[i].r.start.column - 1) // and no space between the identifier and paren
+    {
+        // TODO test the parameters working correctly
+        params = []
+        i++ // skip the opening param
+        for ( ;
+            i < tokens.length &&
+            tokens[i].r.start.line == current_line &&
+            tokens[i].kind != token_kinds.close_paren;
+            i++)
+        {
+            if (tokens[i].kind == token_kinds.ellipsis) { // variadic parameter
+                if (variadic >= 0) {
+                    // TODO: throw preprocessor error (multiple variadic arguments)
+                } else {
+                    params.push(tokens[i].content)
+                    variadic = params.length - 1
+                }
+            } else if (tokens[i].kind == token_kinds.identifier) {
+                params.push(tokens[i].content)
+                if (tokens[i+1].kind == token_kinds.comma) {
+                    i++
+                }
+            } else {
+                // TODO: throw preprocessor error
+            }
+        }
+        i++ // skip the closing paren
+    }
+    for (; i < tokens.length && tokens[i].r.start.line == current_line; i++) {
+        body.push(tokens[i])
+    }
+    context.defines[tokens[index + 2].content] = new PreprocessorDefine(
+        tokens[index + 2].content,
+        params,
+        body,
+        variadic
+    )
+    return new PreprocessItemResult([], i-index)
 }
 
 /**
@@ -176,7 +239,7 @@ function match_defined_symbols(tokens, index, defines) {
  * 
  * @param {Token[]} tokens 
  * @param {number} index 
- * @param {Object.<string,Token[]>} defines
+ * @param {Object.<string,PreprocessorDefine>} defines
  * @param {CompilerContext} context 
  * @returns {?PreprocessItemResult}
  */
@@ -186,7 +249,7 @@ function substitute_defined(tokens, index, defines, context) {
     /** @type {Token[][]} */
     let substitute_tokens = []
     // co
-    for (const token of defines[tokens[index].content]) {
+    for (const token of defines[tokens[index].content].body) {
         if (token.kind == token_kinds.define_placeholder) {
             for (const substitute of substitute_tokens[token.content]) {
                 new_tokens.push(substitute)
@@ -210,12 +273,12 @@ function process(tokens, this_file, context) {
     let processed = []
     let i = 0
     let this_file_token = new Token(token_kinds.string, this_file)
-    context.defines["__FILE__"] = [this_file_token, ]
+    context.defines["__FILE__"] = new PreprocessorDefine("__FILE__", null, [this_file_token, ], -1)
     while (i < tokens.length) {
         if (match_include(tokens, i)) {
-            this_file_token = context.defines["__FILE__"] // back up __FILE__ (as it might have been changed by user code)
+            let this_file_body = context.defines["__FILE__"].body // back up __FILE__ (as it might have been changed by user code)
             let result = process_include(tokens, i, this_file, context)
-            context.defines["__FILE__"] = [this_file_token, ] // reset __FILE__ #define
+            context.defines["__FILE__"] = new PreprocessorDefine("__FILE__", null, this_file_body, -1) // reset __FILE__ #define
             processed = [...processed, ...result.tokens]
             i += result.consumed
         } else if (match_defined_symbols(tokens, i, context.defines)) {
@@ -227,7 +290,10 @@ function process(tokens, this_file, context) {
         } else if (match_ifdef(tokens, i)) {
             // TODO
         } else if (match_define(tokens, i)) {
-            // TODO
+            // TODO flesh out
+            let result = process_define(tokens, i, context)
+            processed = [...processed, ...result.tokens]
+            i += result.consumed
         } else {
             processed.push(tokens[i])
             i++
