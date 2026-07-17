@@ -128,7 +128,7 @@ function process_define(tokens, index, context) {
         }
     }
     for (; i < tokens.length && tokens[i].r.start.line == current_line; i++) {
-        let found = params.indexOf(tokens[i].content);
+        let found = (params != null)? params.indexOf(tokens[i].content) : -1;
         if (found !== -1) {
             body.push(new Token(define_placeholder, tokens[i].content, tokens[i].rep, tokens[i].r))
         } else {
