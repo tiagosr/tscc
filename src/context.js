@@ -1,4 +1,4 @@
-import { CompilerError } from "./errors.js"
+import { CompilerError, PreprocessorError } from "./errors.js"
 import { CompilationTarget } from "./target.js"
 import { Console } from "console"
 

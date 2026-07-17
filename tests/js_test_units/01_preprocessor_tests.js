@@ -1,3 +1,4 @@
+/* eslint-disable no-undef */
 import assert from "node:assert/strict"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -5,7 +6,6 @@ import { fileURLToPath } from "node:url"
 import { tokenize } from "../../src/lexer.js"
 import { process as preprocess } from "../../src/preprocessor.js"
 import { Config, PreprocessorContext } from "../../src/context.js"
-import { Token, ErrorToken } from "../../src/tokens.js"
 import { PreprocessorError } from "../../src/errors.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -134,7 +134,7 @@ describe("preprocessor", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             assert.throws(function() {
-                const result = preprocess_source("#define ADD(", filename, context)
+                preprocess_source("#define ADD(", filename, context)
             }, PreprocessorError)
         })
 
@@ -142,7 +142,7 @@ describe("preprocessor", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             assert.throws(function() {
-                const result = preprocess_source("#define ADD(a\n)", filename, context)
+                preprocess_source("#define ADD(a\n)", filename, context)
             }, PreprocessorError)
         })
 
@@ -150,7 +150,7 @@ describe("preprocessor", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             assert.throws(function() {
-                const result = preprocess_source("#define ADD(a, ..., ...)", filename, context)
+                preprocess_source("#define ADD(a, ..., ...)", filename, context)
             }, PreprocessorError)
         })
 
@@ -166,7 +166,7 @@ describe("preprocessor", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             assert.throws(function() {
-                const result = preprocess_source("#define ADD(a, b) a + b\nADD(1, 2", filename, context)
+                preprocess_source("#define ADD(a, b) a + b\nADD(1, 2", filename, context)
             }, PreprocessorError)
         })
 
@@ -174,7 +174,7 @@ describe("preprocessor", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             assert.throws(function() {
-                const result = preprocess_source("#define ADD(a, b) a + b\nADD(1)", filename, context)
+                preprocess_source("#define ADD(a, b) a + b\nADD(1)", filename, context)
             }, PreprocessorError)
         })
 
@@ -226,7 +226,7 @@ describe("preprocessor", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             assert.throws(function() {
-                const result = preprocess_source("#include \"does_not_exist.h\"", filename, context)
+                preprocess_source("#include \"does_not_exist.h\"", filename, context)
             }, PreprocessorError)
         })
     })
@@ -239,14 +239,36 @@ describe("preprocessor", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("#if 0\nHELLO;\n#endif", filename, context)
-            assert.equal(result.length, 0)
             assert.deepEqual(contents(result), [])
         })
-        it.skip("keeps the body of a true #ifdef block", function() {
+        it.skip("keeps the body of a true #if block", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("#if 1\nHELLO;\n#endif", filename, context)
-            assert.equal(result.length, 2)
+            assert.deepEqual(contents(result), ["HELLO", ";"])
+        })
+        it("skips the body of a false #ifdef block", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#ifdef HI\nHELLO;\n#endif", filename, context)
+            assert.deepEqual(contents(result), [])
+        })
+        it("keeps the body of a true #ifdef block", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define HI\n#ifdef HI\nHELLO;\n#endif", filename, context)
+            assert.deepEqual(contents(result), ["HELLO", ";"])
+        })
+        it("skips the first body of a false #ifdef/#else block", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#ifdef HI\nHELLO;\n#else\nHEY;\n#endif", filename, context)
+            assert.deepEqual(contents(result), ["HEY", ";"])
+        })
+        it("keeps the first body of a true #ifdef/#else block", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define HI\n#ifdef HI\nHELLO;\n#else\nHEY;\n#endif", filename, context)
             assert.deepEqual(contents(result), ["HELLO", ";"])
         })
     })

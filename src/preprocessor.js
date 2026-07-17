@@ -1,11 +1,11 @@
-import { Config, CompilerContext } from "./context.js"
 import { Token } from "./tokens.js"
 import { tokenize } from "./lexer.js"
-import { pound, identifier as _identifier, open_paren, close_paren, ellipsis, comma, include_file, define_placeholder, string } from "./token_kinds.js"
+import { pound, identifier as _identifier, open_paren, close_paren, ellipsis, comma, include_file, define_placeholder, string, identifier, else_kw } from "./token_kinds.js"
 import { resolve } from "path"
 import { existsSync, readFileSync } from "fs"
 import { NotImplementedError, PreprocessorError } from "./errors.js"
 import { StreamRange } from "./utils.js"
+import { PreprocessorContext } from "./context.js"
 
 class PreprocessItemResult {
     /**
@@ -48,6 +48,7 @@ class PreprocessorDefine {
     }
 }
 
+
 /**
  * 
  * @param {Token[]} tokens 
@@ -67,7 +68,7 @@ function match_define(tokens, index) {
  * 
  * @param {Token[]} tokens 
  * @param {number} index 
- * @param {CompilerContext} context 
+ * @param {PreprocessorContext} context 
  * @returns {PreprocessItemResult}
  */
 function process_define(tokens, index, context) {
@@ -177,7 +178,7 @@ function match_if(tokens, index) {
  * 
  * @param {Token[]} tokens 
  * @param {number} index 
- * @param {CompilerContext} context 
+ * @param {PreprocessorContext} context 
  * @returns {PreprocessItemResult}
  */
 function process_if(tokens, index, context) {
@@ -204,6 +205,42 @@ function match_ifdef(tokens, index) {
     )
 }
 
+/**
+ * 
+ * @param {Token[]} tokens 
+ * @param {number} index 
+ * @param {PreprocessorContext} context 
+ * @returns {PreprocessItemResult}
+ */
+function process_ifdef(tokens, index, context, this_file) {
+    let allow = tokens[index + 1].content == "ifdef" && (tokens[index + 2].content in context.defines)
+    /** @type {Token[]} */
+    let processed = []
+    let i = index + 3
+
+    for (;;) {
+        if (i + 1 >= tokens.length) {
+            throw new PreprocessorError("unexpected end-of-file while processing #ifdef branches", new StreamRange(tokens[tokens.length-1].r.end), processed)
+        }
+        if (tokens[i].isKind(pound)) {
+            if (tokens[i+1].content == "endif") {
+                i+=2
+                break
+            } else if (tokens[i+1].content == "else") {
+                allow = !allow
+                i+=2
+                continue
+            }
+        }
+        let {produced, consumed} = process_token(tokens[i], tokens, i, context, this_file)
+        i += consumed;
+        if (allow) {
+            processed = [...processed, ...produced]
+        }        
+    }
+    return new PreprocessItemResult(processed, i - index)
+}
+
 
 
 /**
@@ -226,7 +263,7 @@ function match_include(tokens, index) {
  * @param {Token[]} tokens 
  * @param {number} index
  * @param {string} this_file 
- * @param {CompilerContext} context
+ * @param {PreprocessorContext} context
  * @returns {PreprocessItemResult} The preprocessed tokens
  */
 function process_include(tokens, index, this_file, context) {
@@ -274,7 +311,7 @@ function match_defined_symbols(tokens, index, defines) {
  * @param {Token[]} tokens 
  * @param {number} index 
  * @param {Object.<string,PreprocessorDefine>} defines
- * @param {CompilerContext} context 
+ * @param {PreprocessorContext} context 
  * @returns {PreprocessItemResult}
  */
 function substitute_defined(tokens, index, defines, context) {
@@ -380,7 +417,7 @@ function substitute_defined(tokens, index, defines, context) {
  * @param {Token} token 
  * @param {Token[]} tokens 
  * @param {number} i 
- * @param {Context} context 
+ * @param {PreprocessorContext} context 
  * @returns {{produced:Token[], consumed:number}}
  */
 function process_token(token, tokens, i, context, this_file) {
@@ -393,8 +430,8 @@ function process_token(token, tokens, i, context, this_file) {
         // TODO
         throw new NotImplementedError()
     } else if (match_ifdef(tokens, i)) {
-        // TODO
-        throw new NotImplementedError()
+        let result = process_ifdef(tokens, i, context, this_file)
+        return {produced: result.produced, consumed: result.consumed}
     } else if (match_define(tokens, i)) {
         // TODO flesh out
         let result = process_define(tokens, i, context)
@@ -416,7 +453,7 @@ function process_token(token, tokens, i, context, this_file) {
  * Do a preprocessor pass on the tokens generated from a file
  * @param {Token[]} tokens Input token list
  * @param {string} this_file The full path to the current file
- * @param {Context} context 
+ * @param {PreprocessorContext} context 
  * @returns {Token[]} The preprocessed tokens
  */
 function process(tokens, this_file, context) {
