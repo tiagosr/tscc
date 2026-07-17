@@ -47,6 +47,14 @@ class Token {
     get is_line_start() {
         return this.r.start.column == 0
     }
+
+    /**
+     * 
+     * @param {TokenKind} kind 
+     */
+    isKind(kind) {
+        return this.kind.text_repr == kind.text_repr
+    }
 }
 
 class ErrorToken extends Token {

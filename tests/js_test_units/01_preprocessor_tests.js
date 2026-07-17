@@ -6,6 +6,7 @@ import { tokenize } from "../../src/lexer.js"
 import { process as preprocess } from "../../src/preprocessor.js"
 import { Config, PreprocessorContext } from "../../src/context.js"
 import { Token, ErrorToken } from "../../src/tokens.js"
+import { PreprocessorError } from "../../src/errors.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const fixtures_dir = path.join(__dirname, "fixtures")
@@ -113,6 +114,22 @@ describe("preprocessor", function() {
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("#define B A\n#define A B\nB\n", filename, context)
             assert.deepEqual(contents(result), ["B"])
+        })
+
+        it("correctly parses parameter lists in defines", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define ADD(a, b) a + b\n", filename, context)
+            assert.deepEqual(contents(result), [])
+        })
+
+        it("correctly throws error in incomplete lists of parameters", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            assert.throws(function() {
+                const result = preprocess_source("#define ADD(a, b\n)", filename, context)
+                assert.fail("should not arrive here")
+            }, PreprocessorError)
         })
 
         // Known limitation, tracked by the "TODO test the parameters working correctly" /

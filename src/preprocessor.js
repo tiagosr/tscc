@@ -4,7 +4,7 @@ import { tokenize } from "./lexer.js"
 import { pound, identifier as _identifier, open_paren, close_paren, ellipsis, comma, include_file, define_placeholder, string } from "./token_kinds.js"
 import { resolve } from "path"
 import { existsSync, readFileSync } from "fs"
-import { CompilerError, NotImplementedError, PreprocessorError } from "./errors.js"
+import { NotImplementedError, PreprocessorError } from "./errors.js"
 import { StreamRange } from "./utils.js"
 
 class PreprocessItemResult {
@@ -63,6 +63,8 @@ function match_define(tokens, index) {
     )
 }
 
+const define_parameter_error_token_kind = new TokenKind("define parameter error")
+
 /**
  * 
  * @param {Token[]} tokens 
@@ -77,36 +79,54 @@ function process_define(tokens, index, context) {
     let params = null
     let variadic = -1
 
-    if (tokens[i].kind == open_paren &&               // there is an open paren
+    if (tokens[i].isKind(open_paren) &&               // there is an open paren
         tokens[i-1].r.end.line == tokens[i].r.start.line &&       // in the same line
         tokens[i-1].r.end.column == tokens[i].r.start.column - 1) // and no space between the identifier and paren
     {
+        let expect_param = true
         // TODO test the parameters working correctly
         params = []
         i++ // skip the opening param
-        for ( ;
-            i < tokens.length &&
-            tokens[i].r.start.line == current_line &&
-            tokens[i].kind != close_paren;
-            i++)
+        for (;;i++)
         {
-            if (tokens[i].kind == ellipsis) { // variadic parameter
-                if (variadic >= 0) {
-                    // TODO: throw preprocessor error (multiple variadic arguments)
-                } else {
+            if (i >= tokens.length)
+                throw new PreprocessorError("unexpected end-of-file", new StreamRange(tokens[tokens.length-1].r.end), [])
+            if (tokens[i].r.start.line != current_line) {
+                if (expect_param)
+                    throw new PreprocessorError("malformed define parameter list: expected identifier, '...' or ')' before new-line", tokens[i].r, [])
+                else
+                    throw new PreprocessorError("malformed define parameter list: expected ',' or ')' before new-line", tokens[i].r, [])
+            }
+            if (expect_param) {
+                if (tokens[i].isKind(ellipsis)) { // variadic parameter
+                    if (variadic >= 0) {
+                        throw new PreprocessorError("multiple variadic parameters", tokens[i].r, [])
+                    } else {
+                        params.push(tokens[i].content)
+                        variadic = params.length - 1
+                    }
+                    expect_param = false
+                } else if (tokens[i].isKind(_identifier)) {
+                    if (variadic > 0) {
+                        throw new PreprocessorError("invalid identifier after variadic parameter", tokens[i].r, [])
+                    }
                     params.push(tokens[i].content)
-                    variadic = params.length - 1
-                }
-            } else if (tokens[i].kind == _identifier) {
-                params.push(tokens[i].content)
-                if (tokens[i+1].kind == comma) {
-                    i++
+                    expect_param = false
+                } else if (tokens[i].isKind(close_paren)) {
+                    break
+                } else {
+                    throw new PreprocessorError("invalid token: expected identifier, '...' or ')'", tokens[i].r, [])
                 }
             } else {
-                // TODO: throw preprocessor error
+                if (tokens[i].kind == comma) {
+                    expect_param = true // flip back to expecting a parameter or )
+                } else if (tokens[i].isKind(close_paren)) {
+                    break
+                } else {
+                    throw new PreprocessorError("invalid token: expected ',' or ')'", tokens[i+1].r, [])
+                }
             }
         }
-        i++ // skip the closing paren
     }
     for (; i < tokens.length && tokens[i].r.start.line == current_line; i++) {
         body.push(tokens[i])
@@ -128,8 +148,8 @@ function process_define(tokens, index, context) {
  */
 function match_undef(tokens, index) {
     return (
-        tokens[index].kind == pound &&
-        tokens[index + 1].kind == _identifier &&
+        tokens[index].isKind(pound) &&
+        tokens[index + 1].isKind(_identifier) &&
         tokens[index + 1].content == "undef"
     )
 }
@@ -142,8 +162,8 @@ function match_undef(tokens, index) {
  */
 function match_if(tokens, index) {
     return (
-        tokens[index].kind == pound &&
-        tokens[index + 1].kind == _identifier &&
+        tokens[index].isKind(pound) &&
+        tokens[index + 1].isKind(_identifier) &&
         tokens[index + 1].content == "if"
     )
 }
@@ -173,10 +193,10 @@ function process_if(tokens, index, context) {
  */
 function match_ifdef(tokens, index) {
     return (
-        tokens[index].kind == pound &&
-        tokens[index + 1].kind == _identifier &&
+        tokens[index].isKind(pound) &&
+        tokens[index + 1].isKind(_identifier) &&
         tokens[index + 1].content == "ifdef" &&
-        tokens[index + 2].kind == _identifier
+        tokens[index + 2].isKind(_identifier)
     )
 }
 
@@ -190,10 +210,10 @@ function match_ifdef(tokens, index) {
  */
 function match_include(tokens, index) {
     return (
-        tokens[index].kind == pound &&
-        tokens[index + 1].kind == _identifier &&
+        tokens[index].isKind(pound) &&
+        tokens[index + 1].isKind(_identifier) &&
         tokens[index + 1].content == "include" &&
-        tokens[index + 2].kind == include_file
+        tokens[index + 2].isKind(include_file)
     )
 }
 
@@ -213,7 +233,7 @@ function process_include(tokens, index, this_file, context) {
         let new_tokens = process(tokenize(file, filename, context), filename, context)
         return new PreprocessItemResult(new_tokens, 3)
     } catch (e) {
-        if (e instanceof CompilerError) {
+        if (e instanceof PreprocessorError) {
             let new_tokens = [
                 new ErrorToken(
                     include_error_kind,
@@ -250,7 +270,7 @@ function read_file(include_file_token, this_file, config) {
             return new ReadFileResult(readFileSync(include).toString(), include)
         }
     }
-    throw new CompilerError("Include file not found", include_file_token.r)
+    throw new PreprocessorError("include file not found", include_file_token.r, [])
 }
 
 /**
