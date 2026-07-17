@@ -123,33 +123,68 @@ describe("preprocessor", function() {
             assert.deepEqual(contents(result), [])
         })
 
-        it("correctly throws error in incomplete lists of parameters", function() {
+        it("correctly parses parameter lists in defines with variadic parameters", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("#define ADD(a, b, ...) a + b\n", filename, context)
+            assert.deepEqual(contents(result), [])
+        })
+
+        it("correctly throws error in incomplete lists of parameters (1/2)", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             assert.throws(function() {
-                const result = preprocess_source("#define ADD(a, b\n)", filename, context)
-                assert.fail("should not arrive here")
+                const result = preprocess_source("#define ADD(", filename, context)
             }, PreprocessorError)
         })
 
-        // Known limitation, tracked by the "TODO test the parameters working correctly" /
-        // "TODO flesh out" comments in src/preprocessor.js: process_define() records a
-        // function-like macro's parameter names but nothing ever binds call-site arguments
-        // to them, and substitute_defined() only consumes the macro name token (not the
-        // argument list). Re-enable once parameter substitution is implemented.
-        it.skip("substitutes macro parameters at the call site", function() {
+        it("correctly throws error in incomplete lists of parameters (2/2)", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            assert.throws(function() {
+                const result = preprocess_source("#define ADD(a\n)", filename, context)
+            }, PreprocessorError)
+        })
+
+        it("correctly throws error in multiple variadic parameters", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            assert.throws(function() {
+                const result = preprocess_source("#define ADD(a, ..., ...)", filename, context)
+            }, PreprocessorError)
+        })
+
+        it("substitutes macro parameters at the call site", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("#define ADD(a, b) a + b\nADD(1, 2)", filename, context)
             assert.deepEqual(contents(result), ["1", "+", "2"])
         })
 
+
+        it("correctly throws error if parameters are incomplete at the call site", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            assert.throws(function() {
+                const result = preprocess_source("#define ADD(a, b) a + b\nADD(1, 2", filename, context)
+            }, PreprocessorError)
+        })
+
+        it("correctly throws error if parameter count doesn't match at the call site", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            assert.throws(function() {
+                const result = preprocess_source("#define ADD(a, b) a + b\nADD(1)", filename, context)
+            }, PreprocessorError)
+        })
+
+
         describe("#undef", function() {
             it("undefines a previously defined macro", function() {
                 const context = make_context()
                 const filename = path.join(fixtures_dir, "virtual_main.c")
-                const result = preprocess_source("#define A 1\n#undef A\nA", filename, context)
-                assert.deepEqual(contents(result), ["A"])
+                const result = preprocess_source("#define A 1\nA\n#undef A\nA", filename, context)
+                assert.deepEqual(contents(result), ["1", "A"])
             })
             it("fails silently if an identifier was not defined", function() {
                 const context = make_context()
@@ -187,14 +222,12 @@ describe("preprocessor", function() {
             assert.deepEqual(contents(result), ["7"])
         })
 
-        it("emits an error token when the included file cannot be found", function() {
+        it("correctly throws an error when the included file cannot be found", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
-            const result = preprocess_source("#include \"does_not_exist.h\"", filename, context)
-            assert.equal(result.length, 1)
-            assert.ok(result[0] instanceof ErrorToken)
-            assert.equal(result[0].kind.text_repr, "include error")
-            assert.equal(result[0].content, "\"does_not_exist.h\"")
+            assert.throws(function() {
+                const result = preprocess_source("#include \"does_not_exist.h\"", filename, context)
+            }, PreprocessorError)
         })
     })
 

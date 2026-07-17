@@ -95,13 +95,13 @@ export const dot = new TokenKind(".", symbol_kinds)
 export const arrow = new TokenKind("->", symbol_kinds)
 export const ellipsis = new TokenKind("...", symbol_kinds)
 
-export const identifier = new TokenKind()
-export const number = new TokenKind()
-export const string = new TokenKind()
-export const char_string = new TokenKind()
-export const include_file = new TokenKind()
-export const define_placeholder = new TokenKind()
+export const identifier = new TokenKind("%%identifier%%")
+export const number = new TokenKind("%%number%%")
+export const string = new TokenKind("%%string%%")
+export const char_string = new TokenKind("%%char_string%%")
+export const include_file = new TokenKind("%%include_file%%")
+export const define_placeholder = new TokenKind("%%define_placeholder%%")
 
-export const error_char_string_size = new TokenKind("", error_kinds)
+export const error_char_string_size = new TokenKind("!!error_char_string_size!!", error_kinds)
 
 export { keyword_kinds, symbol_kinds, error_kinds }

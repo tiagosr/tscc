@@ -48,7 +48,7 @@ class ParserContext {
      * @param {TokenKind} kind 
      */
     token_is(index, kind) {
-        return (this.tokens.length > index) && (this.tokens.kind == kind)
+        return (this.tokens.length > index) && (this.tokens[index].isKind(kind))
     }
 
     /**
@@ -57,7 +57,7 @@ class ParserContext {
      * @param {TokenKind[]} kinds 
      */
     token_in(index, kinds) {
-        return (this.tokens.length > index) && (this.tokens.kind in kinds)
+        return (this.tokens.length > index) && (kinds.filter(kind => this.tokens[index].isKind(kind)).length > 0)
     }
 
     /**

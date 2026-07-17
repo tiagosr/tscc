@@ -1,5 +1,5 @@
 import { Config, CompilerContext } from "./context.js"
-import { Token, ErrorToken, TokenKind } from "./tokens.js"
+import { Token } from "./tokens.js"
 import { tokenize } from "./lexer.js"
 import { pound, identifier as _identifier, open_paren, close_paren, ellipsis, comma, include_file, define_placeholder, string } from "./token_kinds.js"
 import { resolve } from "path"
@@ -56,14 +56,12 @@ class PreprocessorDefine {
  */
 function match_define(tokens, index) {
     return (
-        tokens[index].kind == pound &&
-        tokens[index + 1].kind == _identifier &&
+        tokens[index].isKind(pound) &&
+        tokens[index + 1].isKind(_identifier) &&
         tokens[index + 1].content == "define" &&
-        tokens[index + 2].kind == _identifier
+        tokens[index + 2].isKind(_identifier)
     )
 }
-
-const define_parameter_error_token_kind = new TokenKind("define parameter error")
 
 /**
  * 
@@ -78,13 +76,12 @@ function process_define(tokens, index, context) {
     let i = index + 3
     let params = null
     let variadic = -1
-
+    
     if (tokens[i].isKind(open_paren) &&               // there is an open paren
         tokens[i-1].r.end.line == tokens[i].r.start.line &&       // in the same line
         tokens[i-1].r.end.column == tokens[i].r.start.column - 1) // and no space between the identifier and paren
     {
         let expect_param = true
-        // TODO test the parameters working correctly
         params = []
         i++ // skip the opening param
         for (;;i++)
@@ -113,14 +110,16 @@ function process_define(tokens, index, context) {
                     params.push(tokens[i].content)
                     expect_param = false
                 } else if (tokens[i].isKind(close_paren)) {
+                    i++
                     break
                 } else {
                     throw new PreprocessorError("invalid token: expected identifier, '...' or ')'", tokens[i].r, [])
                 }
             } else {
-                if (tokens[i].kind == comma) {
+                if (tokens[i].isKind(comma)) {
                     expect_param = true // flip back to expecting a parameter or )
                 } else if (tokens[i].isKind(close_paren)) {
+                    i++
                     break
                 } else {
                     throw new PreprocessorError("invalid token: expected ',' or ')'", tokens[i+1].r, [])
@@ -129,7 +128,12 @@ function process_define(tokens, index, context) {
         }
     }
     for (; i < tokens.length && tokens[i].r.start.line == current_line; i++) {
-        body.push(tokens[i])
+        let found = params.indexOf(tokens[i].content);
+        if (found !== -1) {
+            body.push(new Token(define_placeholder, tokens[i].content, tokens[i].rep, tokens[i].r))
+        } else {
+            body.push(tokens[i])
+        }
     }
     context.defines[tokens[index + 2].content] = new PreprocessorDefine(
         tokens[index + 2].content,
@@ -217,8 +221,6 @@ function match_include(tokens, index) {
     )
 }
 
-const include_error_kind = new TokenKind("include error")
-
 /**
  * 
  * @param {Token[]} tokens 
@@ -228,25 +230,9 @@ const include_error_kind = new TokenKind("include error")
  * @returns {PreprocessItemResult} The preprocessed tokens
  */
 function process_include(tokens, index, this_file, context) {
-    try {
-        let { file, filename } = read_file(tokens[index + 2], this_file, context.config)
-        let new_tokens = process(tokenize(file, filename, context), filename, context)
-        return new PreprocessItemResult(new_tokens, 3)
-    } catch (e) {
-        if (e instanceof PreprocessorError) {
-            let new_tokens = [
-                new ErrorToken(
-                    include_error_kind,
-                    tokens[index + 2].content,
-                    null,
-                    tokens[index].r.concat(tokens[index + 2].r)
-                )
-            ]
-            return new PreprocessItemResult(new_tokens, 3)
-        } else {
-            throw e
-        }
-    }
+    let { file, filename } = read_file(tokens[index + 2], this_file, context.config)
+    let new_tokens = process(tokenize(file, filename, context), filename, context)
+    return new PreprocessItemResult(new_tokens, 3)
 }
 
 
@@ -294,12 +280,82 @@ function match_defined_symbols(tokens, index, defines) {
 function substitute_defined(tokens, index, defines, context) {
     /** @type {Token[]} */
     let new_tokens = []
-    let consumed_tokens = 1
-    /** @type {Token[][]} */
-    let substitute_tokens = []
+    /** @type {Object.<string,Token[]>} */
+    let substitute_tokens = {}
+
+    /** @type {PreprocessorDefine} */
+    let define = defines[tokens[index].content];
+    let i = index + 1;
+
+    const collectTokensUntilCloseParen = () => {
+        let param_tokens = []
+        for (;;i++) {
+            if (i >= tokens.length) {
+                throw new PreprocessorError("unexpected end-of-file collecting arguments for define instantiation", new StreamRange(tokens[tokens.length-1].end), [])
+            }
+            if (tokens[i].isKind(close_paren)) {
+                return param_tokens
+            } else if (tokens[i].isKind(open_paren)) {
+                param_tokens.append(collectTokensUntilCloseParen())
+            } else {
+                param_tokens.push(tokens[i])
+            }
+        }
+    }
+
+    const collectNextParameterTokens = () => {
+        /** @type {Token[]} */
+        let param_tokens = []
+
+        for (;;i++) {
+            if (i >= tokens.length) {
+                throw new PreprocessorError("unexpected end-of-file collecting arguments for define instantiation", new StreamRange(tokens[tokens.length-1].end), [])
+            }
+            if (tokens[i].isKind(close_paren)) {
+                i--;
+                return param_tokens
+            } else if (tokens[i].isKind(comma)) {
+                return param_tokens
+            } else if (tokens[i].isKind(open_paren)) {
+                param_tokens.append(collectTokensUntilCloseParen())
+            } else {
+                param_tokens.push(tokens[i])
+            }
+        }
+    }
+
+    if (define.parameters != null) {
+        /** @type {Token[][]} */
+        let collected = []
+        if (i >= tokens.length) {
+            throw new PreprocessorError("unexpected end-of-file collecting arguments for define instantiation", new StreamRange(tokens[tokens.length-1].end), [])
+        }
+        if (!tokens[i].isKind(open_paren)) {
+            throw new PreprocessorError(`define ${define.identifier} expected '('`, tokens[i].r, [])
+        }
+        i++; // walk past the open_paren
+        for (;;i++) {
+            if (i >= tokens.length)
+                throw new PreprocessorError("unexpected end-of-file collecting arguments for define instantiation", new StreamRange(tokens[tokens.length-1].end), [])
+            if (tokens[i].isKind(close_paren)) break
+            if (tokens[i].isKind(comma)) continue
+            collected.push(collectNextParameterTokens())
+        }
+        if (collected.length < define.parameters.length) {
+            throw new PreprocessorError(`define ${define.identifier} expected ${define.parameters.length} parameters, got ${collected.length}`, tokens[i].r, [])
+        }
+        define.parameters.forEach((parameter, i) => {
+            substitute_tokens[parameter] = collected[i]
+        });
+        if (define.variadic > 0) {
+            substitute_tokens['__VA_ARGS__'] = collected.slice(define.parameters.length).flatMap(args => args)
+        }
+        i++; // walk past the close_paren
+    }
+
     // apply the substitution (recursively)
     for (const token of defines[tokens[index].content].body) {
-        if (token.kind == define_placeholder) {
+        if (token.isKind(define_placeholder)) {
             for (const substitute of substitute_tokens[token.content]) {
                 new_tokens.push(substitute)
             }
@@ -315,7 +371,7 @@ function substitute_defined(tokens, index, defines, context) {
             new_tokens = [...new_tokens.slice(0, i), ...repeat.produced, ...new_tokens.slice(i+1)];
         }
     }
-    return new PreprocessItemResult(new_tokens, consumed_tokens)
+    return new PreprocessItemResult(new_tokens, i - index)
 }
 
 

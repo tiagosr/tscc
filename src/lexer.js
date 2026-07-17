@@ -297,8 +297,8 @@ function match_symbol_kind_at(content, start) {
  */
 function match_include_command(tokens) {
     return ((tokens.length == 2) &&
-        tokens[0].kind == pound &&
-        tokens[1].kind == identifier &&
+        tokens[0].isKind(pound) &&
+        tokens[1].isKind(identifier) &&
         tokens[1].content == "include")
 }
 
