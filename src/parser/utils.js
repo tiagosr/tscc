@@ -20,6 +20,8 @@ class ParserError extends CompilerError {
         let range = null
         if (tokens.length == 0) {
             formatted = `${message} at the beginning of source`
+        } else if (tokens.length < index) {
+            formatted = `${message} at EOF`
         } else {
             if (index >= tokens.length) {
                 index = tokens.length
@@ -41,7 +43,7 @@ class ParserError extends CompilerError {
                 if (tokens[index-1].r) {
                     range = new StreamRange(tokens[index - 1].r.end.incr())
                 }
-                formatted =`${message} after ${tokens[index].toString()}`
+                formatted =`${message} after ${tokens[index - 1].toString()}`
                 break
             }
         }
