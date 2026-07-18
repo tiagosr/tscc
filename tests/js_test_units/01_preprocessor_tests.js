@@ -297,5 +297,19 @@ describe("preprocessor", function() {
             const result = preprocess_source("#define HI\n#ifdef HI\nHELLO;\n#else\nHEY;\n#endif", filename, context)
             assert.deepEqual(contents(result), ["HELLO", ";"])
         })
+        it("correctly throws an error when a stray #elif is found", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            assert.throws(function() {
+                preprocess_source("#elif SOMETHING", filename, context)
+            }, PreprocessorError)
+        })
+        it("correctly throws an error when a stray #else is found", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            assert.throws(function() {
+                preprocess_source("#else", filename, context)
+            }, PreprocessorError)
+        })
     })
 })

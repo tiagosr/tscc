@@ -4,8 +4,8 @@ import { NotImplementedError, PreprocessorError } from "../errors.js"
 import { PreprocessorContext } from "../context.js"
 import { process_define, match_defined_symbols, match_define, substitute_defined, PreprocessorDefine } from "./define.js"
 import { match_include, process_include } from "./include.js"
-import { match_else, match_ifdef, match_endif, process_ifdef } from "./ifdef.js"
-import { match_if } from "./if.js"
+import { match_else, match_ifdef, match_endif, process_ifdef, match_ifndef } from "./ifdef.js"
+import { match_elif, match_if, process_if } from "./if.js"
 import { match_undef, process_undef } from "./undef.js"
 
 /**
@@ -22,15 +22,17 @@ export function process_token(tokens, i, context, this_file) {
         context.defines["__FILE__"] = new PreprocessorDefine("__FILE__", null, this_file_body, -1) // reset __FILE__ #define
         return {produced: result.produced, consumed: result.consumed}
     } else if (match_if(tokens, i)) {
-        // TODO
-        throw new NotImplementedError()
-    } else if (match_ifdef(tokens, i)) {
+        let result = process_if(tokens, i, context)
+        return {produced: result.produced, consumed: result.consumed}
+    } else if (match_ifdef(tokens, i) || match_ifndef(tokens, i)) {
         let result = process_ifdef(tokens, i, context, this_file)
         return {produced: result.produced, consumed: result.consumed}
     } else if (match_else(tokens, i)) {
         throw new PreprocessorError("unexpected #else", tokens[i].r, [])
     } else if (match_endif(tokens, i)) {
         throw new PreprocessorError("unexpected #endif", tokens[i].r, [])
+    } else if (match_elif(tokens, i)) {
+        throw new PreprocessorError("unexpected #elif", tokens[i].r, [])
     } else if (match_define(tokens, i)) {
         let result = process_define(tokens, i, context)
         return {produced: result.produced, consumed: result.consumed}

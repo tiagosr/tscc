@@ -14,8 +14,20 @@ import { process_token } from "./process.js";
 export function match_ifdef(tokens, index) {
     return (
         tokens[index].isKind(pound) &&
-        tokens[index + 1].isKind(identifier_token) &&
         tokens[index + 1].content == "ifdef" &&
+        tokens[index + 2].isKind(identifier_token)
+    )
+}
+/**
+ *
+ * @param {Token[]} tokens
+ * @param {number} index
+ * @returns {boolean}
+ */
+export function match_ifndef(tokens, index) {
+    return (
+        tokens[index].isKind(pound) &&
+        tokens[index + 1].content == "ifndef" &&
         tokens[index + 2].isKind(identifier_token)
     )
 }
@@ -53,7 +65,7 @@ export function match_endif(tokens, index) {
  * @returns {PreprocessItemResult}
  */
 export function process_ifdef(tokens, index, context, this_file) {
-    let allow = tokens[index + 1].content == "ifdef" && (tokens[index + 2].content in context.defines)
+    let allow = tokens[index + 1].content == "ifdef" ^ !(tokens[index + 2].content in context.defines)
     /** @type {Token[]} */
     let processed = []
     let i = index + 3

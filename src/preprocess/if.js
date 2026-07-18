@@ -10,11 +10,27 @@ import { PreprocessItemResult } from "./PreprocessItemResult.js";
  */
 export function match_if(tokens, index) {
     return (
+        (index + 1) < tokens.length &&
         tokens[index].isKind(pound) &&
-        tokens[index + 1].isKind(identifier_token) &&
         tokens[index + 1].content == "if"
     )
-}/**
+}
+
+/**
+ *
+ * @param {Token[]} tokens
+ * @param {number} index
+ * @returns {boolean}
+ */
+export function match_elif(tokens, index) {
+    return (
+        (index + 1) < tokens.length &&
+        tokens[index].isKind(pound) &&
+        tokens[index + 1].content == "elif"
+    )
+}
+
+/**
  *
  * @param {Token[]} tokens
  * @param {number} index
