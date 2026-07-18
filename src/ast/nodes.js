@@ -242,12 +242,27 @@ class SymbolDeclarationItem extends Node {
     }
 }
 
+class TypeIdentifier extends Node {
+    constructor(name) {
+        super()
+        this.name = name
+    }
+}
+
 class TypeInstance extends Node {
     constructor(name) {
         super()
         this.name = name
     }
 
+}
+
+class Typedef extends Node {
+    constructor(name, spec) {
+        super()
+        this.name = name
+        this.spec = spec
+    }
 }
 
 class SymbolDeclaration extends Node {
@@ -262,5 +277,5 @@ export {
     Node, Root, Compound, Return, Break, Continue, EmptyStatement, ExprStatement, IfStatement,
     Identifier, NumberLiteral, StringLiteral, Unary, Binary, Assignment, Ternary, Call, Index, Member,
 
-    TypeInstance, SymbolDeclaration, SymbolDeclarationItem
+    TypeIdentifier, TypeInstance, Typedef, SymbolDeclaration, SymbolDeclarationItem
 }

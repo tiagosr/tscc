@@ -7,9 +7,6 @@ import {
     include_file, dquote, squote, char_string, 
     string_token, symbol_kinds, pound, keyword_kinds
 } from "./token_kinds.js"
-import format from "string-format"
-
-format.extend(String.prototype, {})
 
 /**
  * Class representing tagged characters
@@ -122,9 +119,7 @@ function chunk_to_tokens(chunk) {
         if (identifier_name) {
             return [new Token(identifier_token, identifier_name, null, range), ]
         }
-        throw new CompilerError("unrecognized token at {chk}".format({
-            chk: chunk_to_string(chunk)
-        }))
+        throw new CompilerError(`unrecognized token at ${chunk_to_string(chunk)}`)
     }
     return []
 }

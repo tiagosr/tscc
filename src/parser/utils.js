@@ -1,7 +1,6 @@
 import { StreamRange } from "../utils.js"
 import { CompilerError } from "../errors.js"
-import { Token, TokenKind } from "../tokens.js"
-import format from "string-format"
+import { Token } from "../tokens.js"
 
 const AT = 1
 const AFTER = 2
@@ -20,7 +19,7 @@ class ParserError extends CompilerError {
         /** @type {StreamRange} */
         let range = null
         if (tokens.length == 0) {
-            formatted = format("{message} at the beginning of source", {message: message})
+            formatted = `${message} at the beginning of source`
         } else {
             if (index >= tokens.length) {
                 index = tokens.length
@@ -31,18 +30,18 @@ class ParserError extends CompilerError {
             }
             switch (type) {
             case AT:
-                formatted = format("{message} at {token}", {message: message, token: tokens[index].toString()})
+                formatted = `${message} at ${tokens[index].toString()}`
                 range = tokens[index].r
                 break
             case GOT:
-                formatted = format("{message}, got {token}", { message: message, token: tokens[index].toString() })
+                formatted = `${message}, got ${tokens[index].toString()}`
                 range = tokens[index].r
                 break
             case AFTER:
                 if (tokens[index-1].r) {
                     range = new StreamRange(tokens[index - 1].r.end.incr())
                 }
-                formatted = format("{message} after {token}", { message: message, token: tokens[index-1].toString() })
+                formatted =`${message} after ${tokens[index].toString()}`
                 break
             }
         }
@@ -56,23 +55,45 @@ class ParserError extends CompilerError {
  */
 class SimpleSymbolTable {
     constructor() {
-        /** @type {} */
+        /** @type {{[key:string]:boolean}[]} */
         this.symbols = []
         this.new_scope()
     }
     new_scope() {
-        this.symbols.push(new Array())
+        this.symbols.push({})
     }
     end_scope() {
         this.symbols.pop()
     }
     /**
      * 
-     * @param {*} identifier 
-     * @param {*} is_typedef 
+     * @param {string} identifier 
+     * @param {boolean} is_typedef 
      */
     add_symbol(identifier, is_typedef) {
-        this.symbols[this.symbols.length-1][identifier.context] = is_typedef
+        this.symbols[this.symbols.length-1][identifier] = is_typedef
+    }
+
+    /**
+     * 
+     * @param {string} identifier 
+     * @returns {boolean} true if symbol is defined in any of the scopes, false otherwise
+     */
+    is_symbol_defined(identifier) {
+        return this.symbols.findLastIndex(symbols => identifier in symbols) !== -1
+    }
+
+    /**
+     * 
+     * @param {string} identifier 
+     * @returns true if symbol was registered as a typedef already, false otherwise
+     */
+    is_symbol_typedef(identifier) {
+        const found = this.symbols.findLast(syms => identifier in syms)
+        if (found !== undefined) {
+            return found[identifier]
+        }
+        return false
     }
 }
 

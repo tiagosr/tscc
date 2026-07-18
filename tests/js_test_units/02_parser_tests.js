@@ -418,10 +418,68 @@ describe("parser", function() {
     })
 
     describe("parse_statement", function() {
-        it("currently just delegates to parse_expr_statement", function() {
+        it("currently just delegates to parse_expr_statement via first_of", function() {
             const p = parser_for("a;")
             const result = p.parse_statement(0)
             assert.deepEqual(shape(result.node), { type: "ExprStatement", expr: id("a") })
+        })
+
+        it("surfaces the underlying ParserError when its sole alternative fails", function() {
+            const p = parser_for("a")
+            assert.throws(function() { p.parse_statement(0) }, ParserError)
+        })
+    })
+
+    describe("first_of", function() {
+        it("returns the result of the first alternative that succeeds", function() {
+            const p = parser_for("a")
+            const result = p.first_of(0, [
+                i => p.parse_primary(i),
+            ])
+            assert.deepEqual(shape(result.node), id("a"))
+        })
+
+        it("falls through to the next alternative on a ParserError, retrying from the same index", function() {
+            const p = parser_for("a")
+            const result = p.first_of(0, [
+                i => { p.throw_error_got("this alternative never matches here", i) },
+                i => p.parse_primary(i),
+            ])
+            assert.deepEqual(shape(result.node), id("a"))
+        })
+
+        it("rolls the symbol table back before retrying the next alternative", function() {
+            const p = parser_for("a")
+            p.first_of(0, [
+                i => {
+                    p.symbols.add_symbol({ context: "leaked" }, true)
+                    p.throw_error_got("force a backtrack", i)
+                },
+                i => p.parse_primary(i),
+            ])
+            assert.equal(p.symbols.symbols[0]["leaked"], undefined)
+        })
+
+        it("throws the deepest (best) error when every alternative fails", function() {
+            const p = parser_for("a")
+            assert.throws(function() {
+                p.first_of(0, [
+                    i => { p.throw_error_got("shallow failure", i) },
+                    i => { p.throw_error_got("deep failure", i + 1) },
+                ])
+            }, /deep failure/)
+        })
+
+        it("re-throws exceptions that aren't ParserErrors immediately, without trying later alternatives", function() {
+            const p = parser_for("a")
+            let second_alternative_tried = false
+            assert.throws(function() {
+                p.first_of(0, [
+                    () => { throw new TypeError("boom") },
+                    i => { second_alternative_tried = true; return p.parse_primary(i) },
+                ])
+            }, TypeError)
+            assert.equal(second_alternative_tried, false)
         })
     })
 })

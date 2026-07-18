@@ -5,7 +5,10 @@ import {
     TypeInstance,
     SymbolDeclaration,
     SymbolDeclarationItem,
-    Root
+    Root,
+    Typedef,
+    Node,
+    TypeIdentifier
 } from "../ast/nodes.js"
 import { Token, TokenKind } from "../tokens.js"
 import {
@@ -17,7 +20,8 @@ import {
     bool_or, bool_and, pipe, xor, amp,
     equalequal, notequal, lt, gt, lt_eq, gt_eq,
     lshift, rshift, plus, minus, star, slash, mod,
-    bool_not, compl, incr, decr, selfcomplement
+    bool_not, compl, incr, decr, selfcomplement,
+    typedef_kw
 } from "../token_kinds.js"
 
 /** C binary-operator precedence, low to high (assignment/ternary/comma are handled separately) */
@@ -67,12 +71,25 @@ class ParserContext {
         this.best_error = null
     }
 
+    /**
+     * 
+     * @param {string} err 
+     * @param {number} index 
+     */
     throw_error_at(err, index) {
         throw new ParserError(err, index, this.tokens, AT)
     }
 
+    /**
+     * 
+     * @param {string} err 
+     * @param {number} index 
+     * @throws {ParserError}
+     * @returns {NodeIndexPair}
+     */
     throw_error_got(err, index) {
         throw new ParserError(err, index, this.tokens, GOT)
+        return new NodeIndexPair(new Node(), index)
     }
 
     throw_error_after(err, index) {
@@ -134,6 +151,42 @@ class ParserContext {
                 throw e
             }
         }
+    }
+
+    /**
+     * PEG-style ordered choice: tries each rule in {@link rules} in turn, always
+     * starting from the same {@link index}, and returns the first one that
+     * succeeds. Rolls the symbol table back before each retry (mirroring
+     * {@link ParserContext#memoize}) and folds every failure into
+     * {@link ParserContext#best_error}, so if all alternatives fail the caller
+     * still gets the deepest, most plausible error instead of the last one tried.
+     *
+     * Only reach for this when the alternatives genuinely can't be told apart
+     * without attempting a full parse. If a fixed amount of extra lookahead (or
+     * a symbol-table check, e.g. {@link SimpleSymbolTable} for typedef names)
+     * can decide the branch, prefer that -- it's cheaper and gives better error
+     * messages than discarding a whole failed parse.
+     * @param {number} index
+     * @param {((index:number)=>NodeIndexPair)[]} rules alternatives to try, in priority order
+     * @param {string} [message] used only if every alternative fails and somehow left no error behind
+     * @returns {NodeIndexPair}
+     */
+    first_of(index, rules, message = "expected one of several alternatives") {
+        let symbols_bak = structuredClone(this.symbols)
+        for (const rule of rules) {
+            try {
+                return rule(index)
+            } catch (e) {
+                if (!(e instanceof ParserError)) {
+                    throw e
+                }
+                if (!this.best_error || e.amount_parsed >= this.best_error.amount_parsed) {
+                    this.best_error = e
+                }
+                this.symbols = symbols_bak
+            }
+        }
+        throw this.best_error || new ParserError(message, index, this.tokens, GOT)
     }
 
     /**
@@ -204,12 +257,26 @@ class ParserContext {
 
 
 
+    /**
+     * statement: expression-statement
+     *
+     * TODO: only one alternative exists so far. Once if/while/for/return/compound/
+     * declaration statements are written, add them here as further alternatives
+     * to first_of, most-specific first, keeping parse_expr_statement last as the
+     * catch-all. Alternatives that start with an unambiguous keyword (if, while,
+     * return, ...) don't actually need first_of's backtracking -- a plain
+     * token_is/token_in dispatch on the leading token is enough and gives better
+     * errors. first_of only earns its cost for genuinely ambiguous leads, e.g.
+     * telling a declaration (`foo *bar;`) from an expression-statement (`foo * bar;`)
+     * apart when `foo` isn't yet known to be a typedef name.
+     * @param {number} index
+     * @returns {NodeIndexPair}
+     */
     parse_statement(index) {
         return this.with_range(() => {
-            for (const func of []) {
-                //
-            }
-            return this.parse_expr_statement(index)
+            return this.first_of(index, [
+                (i) => this.parse_expr_statement(i),
+            ])
         })(index)
     }
 
@@ -386,6 +453,7 @@ class ParserContext {
         return this.throw_error_got("expected expression", index)
     }
 
+
     /**
      * 
      * @param {number} index 
@@ -393,9 +461,28 @@ class ParserContext {
      */
     parse_type(index) {
         if (this.token_is(index, identifier_token)) {
-            return new NodeIndexPair(this.finish(new TypeInstance(this.tokens[index].content), index, index + 1), index + 1)
+            const id = this.tokens[index].content;
+            if (this.symbols.is_symbol_typedef(id)) {
+                return new NodeIndexPair(this.finish(new TypeIdentifier(id), index, index + 1), index + 1)
+            }
         }
-        return this.throw_error_got("expected type identifier", index)
+        return this.throw_error_got("expected an already-defined type identifier", index)
+    }
+
+    /**
+     * 
+     * @param {number} index 
+     * @returns {NodeIndexPair}
+     */
+    parse_new_type(index) {
+        if (this.token_is(index, identifier_token)) {
+            const id = this.tokens[index].content;
+            if (!this.symbols.is_symbol_typedef(id)) {
+                this.symbols.add_symbol(id, true)
+                return new NodeIndexPair(this.finish(new TypeIdentifier(id), index, index + 1), index + 1)
+            }
+        }
+        return this.throw_error_got("expected a previously-undefined type identifier", index)
     }
 
     /**
@@ -405,10 +492,12 @@ class ParserContext {
      * @returns {NodeIndexPair}
      */
     parse_sym_decl_item(index) {
-        if (this.token_is(index, identifier_token)) {
-            return new NodeIndexPair(this.finish(new SymbolDeclarationItem(this.tokens[index].content), index, index+1), index + 1)
-        }
-        return this.throw_error_got("expected variable identifier", index)
+        return this.with_range(() => {
+            if (this.token_is(index, identifier_token)) {
+                return new NodeIndexPair(this.finish(new SymbolDeclarationItem(this.tokens[index].content), index, index+1), index + 1)
+            }
+            return this.throw_error_got("expected variable identifier", index)
+        })(index)
     }
 
     /**
@@ -434,6 +523,29 @@ class ParserContext {
         return new NodeIndexPair(this.finish(new SymbolDeclaration(variable_nodes, type_node), start, index))
     }
 
+    /**
+     * type definition: 'typedef' ( function-pointer-signature |
+     *                              type-then-name )
+     * @param {number} index 
+     * @returns {NodeIndexPair}
+     */
+    parse_typedef(index) {
+        if (this.token_is(index, typedef_kw)) {
+            this.throw_error_got("expected 'typedef'", index)
+        }
+        const type_result = this.first_of(index + 1, [
+            i => this.parse_type(i)
+        ], "expected a type definition after 'typedef'")
+        /** @type {TypeInstance} */
+        const spec = type_result.node
+
+        const new_typename_result = this.parse_new_type(type_result.index)
+        /** @type {TypeIdentifier} */
+        const typeid = new_typename_result.node
+
+        return new NodeIndexPair(this.finish(new Typedef(typeid, spec), index, new_typename_result.index), new_typename_result.index)
+    }
+
 
     /**
      * root: ( typedef | symbol-declaration | function-declaration | function-definition )*
@@ -444,11 +556,14 @@ class ParserContext {
         let items = []
         for (;;) {
             if (index >= this.tokens.length) {
-                break
+                break;
             }
-            index++
+            let result = this.first_of(index, [
+                i => this.parse_sym_decl(i),
+            ], "expected top-level statement (type/variable/function declaration)")
+            items.push(result.node)
+            index = result.index
         }
-
         return new NodeIndexPair(this.finish(new Root(items), 0, index))
     }
 
