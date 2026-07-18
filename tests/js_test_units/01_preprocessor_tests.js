@@ -1,4 +1,3 @@
-/* eslint-disable no-undef */
 import assert from "node:assert/strict"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
@@ -195,6 +194,7 @@ describe("preprocessor", function() {
                 const result = preprocess_source("#define A 1\nA\n#undef A\nA", filename, context)
                 assert.deepEqual(contents(result), ["1", "A"])
             })
+
             it("fails silently if an identifier was not defined", function() {
                 const context = make_context()
                 const filename = path.join(fixtures_dir, "virtual_main.c")
@@ -211,18 +211,21 @@ describe("preprocessor", function() {
             const result = preprocess_source("__FILE__", filename, context)
             assert.deepEqual(contents(result), [filename])
         })
+
         it("expands to the current line (1-indexed) of the file being processed", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("__LINE__\n__LINE__\n", filename, context)
             assert.deepEqual(contents(result), ["1","2"])
         })
+
         it("expands to the current date as of processing the file", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("__DATE__", filename, context)
             assert.match(result[0].content, /\w{3}\s\d{2}\s\d{4}/)
         })
+
         it("expands to the current time as of processing the file", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
@@ -268,36 +271,42 @@ describe("preprocessor", function() {
             const result = preprocess_source("#if 0\nHELLO;\n#endif", filename, context)
             assert.deepEqual(contents(result), [])
         })
+
         it.skip("keeps the body of a true #if block", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("#if 1\nHELLO;\n#endif", filename, context)
             assert.deepEqual(contents(result), ["HELLO", ";"])
         })
+
         it("skips the body of a false #ifdef block", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("#ifdef HI\nHELLO;\n#endif", filename, context)
             assert.deepEqual(contents(result), [])
         })
+
         it("keeps the body of a true #ifdef block", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("#define HI\n#ifdef HI\nHELLO;\n#endif", filename, context)
             assert.deepEqual(contents(result), ["HELLO", ";"])
         })
+
         it("skips the first body of a false #ifdef/#else block", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("#ifdef HI\nHELLO;\n#else\nHEY;\n#endif", filename, context)
             assert.deepEqual(contents(result), ["HEY", ";"])
         })
+
         it("keeps the first body of a true #ifdef/#else block", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("#define HI\n#ifdef HI\nHELLO;\n#else\nHEY;\n#endif", filename, context)
             assert.deepEqual(contents(result), ["HELLO", ";"])
         })
+
         it("correctly throws an error when a stray #elif is found", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
@@ -305,6 +314,7 @@ describe("preprocessor", function() {
                 preprocess_source("#elif SOMETHING", filename, context)
             }, PreprocessorError)
         })
+        
         it("correctly throws an error when a stray #else is found", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
