@@ -122,4 +122,145 @@ class IfStatement extends Node {
     }
 }
 
-export { Node, Root, Compound, Return, Break, Continue, EmptyStatement, ExprStatement, IfStatement }
+class Identifier extends Node {
+    constructor(name) {
+        super()
+        this.name = name
+    }
+}
+
+class NumberLiteral extends Node {
+    constructor(raw) {
+        super()
+        this.raw = raw
+    }
+}
+
+class StringLiteral extends Node {
+    constructor(raw) {
+        super()
+        this.raw = raw
+    }
+}
+
+class Unary extends Node {
+    /**
+     * @param {TokenKind} op
+     * @param {Node} expr
+     * @param {boolean} [prefix]
+     */
+    constructor(op, expr, prefix = true) {
+        super()
+        this.op = op
+        this.expr = expr
+        this.prefix = prefix
+    }
+}
+
+class Binary extends Node {
+    /**
+     * @param {TokenKind} op
+     * @param {Node} left
+     * @param {Node} right
+     */
+    constructor(op, left, right) {
+        super()
+        this.op = op
+        this.left = left
+        this.right = right
+    }
+}
+
+class Assignment extends Node {
+    /**
+     * @param {TokenKind} op
+     * @param {Node} target
+     * @param {Node} value
+     */
+    constructor(op, target, value) {
+        super()
+        this.op = op
+        this.target = target
+        this.value = value
+    }
+}
+
+class Ternary extends Node {
+    constructor(cond, then_expr, else_expr) {
+        super()
+        this.cond = cond
+        this.then_expr = then_expr
+        this.else_expr = else_expr
+    }
+}
+
+class Call extends Node {
+    /**
+     * @param {Node} callee
+     * @param {Node[]} args
+     */
+    constructor(callee, args) {
+        super()
+        this.callee = callee
+        this.args = args
+    }
+}
+
+class Index extends Node {
+    constructor(target, index) {
+        super()
+        this.target = target
+        this.index = index
+    }
+}
+
+class Member extends Node {
+    /**
+     * @param {Node} target
+     * @param {string} name
+     * @param {boolean} [arrow]
+     */
+    constructor(target, name, arrow = false) {
+        super()
+        this.target = target
+        this.name = name
+        this.arrow = arrow
+    }
+}
+
+
+class SymbolDeclarationItem extends Node {
+    constructor(name, with_indirection = [], with_assignment = null) {
+        super()
+        this.name = name
+        this.with_indirection = with_indirection
+        this.with_assignment = with_assignment
+        this.type = null
+    }
+    setType(type) {
+        this.type = type
+    }
+}
+
+class TypeInstance extends Node {
+    constructor(name) {
+        super()
+        this.name = name
+    }
+
+}
+
+class SymbolDeclaration extends Node {
+    constructor(items, of_type) {
+        super()
+        this.items = items
+        this.of_type = of_type
+    }
+}
+
+export {
+    Node, Root, Compound, Return, Break, Continue, EmptyStatement, ExprStatement, IfStatement,
+    Identifier, NumberLiteral, StringLiteral, Unary, Binary, Assignment, Ternary, Call, Index, Member,
+
+    TypeInstance, SymbolDeclaration, SymbolDeclarationItem
+}
