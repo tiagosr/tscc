@@ -170,11 +170,19 @@ describe("preprocessor", function() {
             }, PreprocessorError)
         })
 
-        it("correctly throws error if parameter count doesn't match at the call site", function() {
+        it("correctly throws error if parameter count doesn't match at the call site (1/2)", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             assert.throws(function() {
                 preprocess_source("#define ADD(a, b) a + b\nADD(1)", filename, context)
+            }, PreprocessorError)
+        })
+
+        it("correctly throws error if parameter count doesn't match at the call site (2/2)", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            assert.throws(function() {
+                preprocess_source("#define ADD(a, b) a + b\nADD(1, 2, 3)", filename, context)
             }, PreprocessorError)
         })
 
@@ -212,7 +220,7 @@ describe("preprocessor", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("__DATE__", filename, context)
-            assert.match(result[0].content, /\w\w\w\s\d\d\s\d\d\d\d/)
+            assert.match(result[0].content, /\w{3}\s\d{2}\s\d{4}/)
         })
         it("expands to the current time as of processing the file", function() {
             const context = make_context()
