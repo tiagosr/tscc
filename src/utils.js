@@ -69,20 +69,28 @@ class StreamPosition {
 }
 class StreamRange {
     /**
-     * 
+     * Specifies a range of characters in a stream
      * @param {StreamPosition} start Start position, inclusive
-     * @param {?StreamPosition} [end] End position, inclusive
+     * @param {?StreamPosition} end End position, inclusive: if not set, then end == start
      */
     constructor(start, end = null) {
         this.start = start
         this.end = end || start
     }
     /**
-     * 
+     * Creates a new range spanning from the start of this range to the end of the other range
      * @param {StreamRange} other 
      */
     concat(other) {
         return new StreamRange(this.start, other.end)
+    }
+
+    /**
+     * Gets the line at the start of the range
+     * @returns {number}
+     */
+    getLine() {
+        return this.start.line
     }
 }
 

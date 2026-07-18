@@ -55,6 +55,13 @@ class Token {
     isKind(kind) {
         return this.kind.text_repr == kind.text_repr
     }
+
+    /**
+     * @returns {number} line number at this token
+     */
+    get line() {
+        return this.r.getLine()
+    }
 }
 
 class ErrorToken extends Token {

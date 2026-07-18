@@ -195,12 +195,30 @@ describe("preprocessor", function() {
         })
     })
 
-    describe("__FILE__", function() {
+    describe("__FILE__, __LINE__, __DATE__, __TIME__", function() {
         it("expands to the path of the file being processed", function() {
             const context = make_context()
             const filename = path.join(fixtures_dir, "virtual_main.c")
             const result = preprocess_source("__FILE__", filename, context)
             assert.deepEqual(contents(result), [filename])
+        })
+        it("expands to the current line (1-indexed) of the file being processed", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("__LINE__\n__LINE__\n", filename, context)
+            assert.deepEqual(contents(result), ["1","2"])
+        })
+        it("expands to the current date as of processing the file", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("__DATE__", filename, context)
+            assert.match(result[0].content, /\w\w\w\s\d\d\s\d\d\d\d/)
+        })
+        it("expands to the current time as of processing the file", function() {
+            const context = make_context()
+            const filename = path.join(fixtures_dir, "virtual_main.c")
+            const result = preprocess_source("__TIME__", filename, context)
+            assert.match(result[0].content, /\d\d:\d\d:\d\d/)
         })
     })
 

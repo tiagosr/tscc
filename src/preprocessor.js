@@ -1,6 +1,6 @@
 import { Token } from "./tokens.js"
 import { tokenize } from "./lexer.js"
-import { pound, identifier as _identifier, open_paren, close_paren, ellipsis, comma, include_file, define_placeholder, string, identifier, else_kw } from "./token_kinds.js"
+import { pound, identifier as _identifier, open_paren, close_paren, ellipsis, comma, include_file, define_placeholder, string } from "./token_kinds.js"
 import { resolve } from "path"
 import { existsSync, readFileSync } from "fs"
 import { NotImplementedError, PreprocessorError } from "./errors.js"
@@ -73,7 +73,7 @@ function match_define(tokens, index) {
  */
 function process_define(tokens, index, context) {
     let body = []
-    let current_line = tokens[index + 2].r.start.line
+    let current_line = tokens[index + 2].line
     let i = index + 3
     let params = null
     let variadic = -1
@@ -89,7 +89,7 @@ function process_define(tokens, index, context) {
         {
             if (i >= tokens.length)
                 throw new PreprocessorError("unexpected end-of-file", new StreamRange(tokens[tokens.length-1].r.end), [])
-            if (tokens[i].r.start.line != current_line) {
+            if (tokens[i].line != current_line) {
                 if (expect_param)
                     throw new PreprocessorError("malformed define parameter list: expected identifier, '...' or ')' before new-line", tokens[i].r, [])
                 else
@@ -128,7 +128,7 @@ function process_define(tokens, index, context) {
             }
         }
     }
-    for (; i < tokens.length && tokens[i].r.start.line == current_line; i++) {
+    for (; i < tokens.length && tokens[i].line == current_line; i++) {
         let found = (params != null)? params.indexOf(tokens[i].content) : -1;
         if (found !== -1) {
             body.push(new Token(define_placeholder, tokens[i].content, tokens[i].rep, tokens[i].r))
@@ -208,6 +208,32 @@ function match_ifdef(tokens, index) {
 /**
  * 
  * @param {Token[]} tokens 
+ * @param {int} index 
+ * @returns {boolean}
+ */
+function match_else(tokens, index) {
+    return (
+        tokens[index].isKind(pound) &&
+        tokens[index + 1].content == "else"
+    )
+}
+
+/**
+ * 
+ * @param {Token[]} tokens 
+ * @param {int} index 
+ * @returns {boolean}
+ */
+function match_endif(tokens, index) {
+    return (
+        tokens[index].isKind(pound) &&
+        tokens[index + 1].content == "endif"
+    )
+}
+
+/**
+ * 
+ * @param {Token[]} tokens 
  * @param {number} index 
  * @param {PreprocessorContext} context 
  * @returns {PreprocessItemResult}
@@ -222,17 +248,15 @@ function process_ifdef(tokens, index, context, this_file) {
         if (i + 1 >= tokens.length) {
             throw new PreprocessorError("unexpected end-of-file while processing #ifdef branches", new StreamRange(tokens[tokens.length-1].r.end), processed)
         }
-        if (tokens[i].isKind(pound)) {
-            if (tokens[i+1].content == "endif") {
-                i+=2
-                break
-            } else if (tokens[i+1].content == "else") {
-                allow = !allow
-                i+=2
-                continue
-            }
+        if (match_endif(tokens, i)) {
+            i+=2
+            break
+        } else if (match_else(tokens, i)) {
+            allow = !allow
+            i+=2
+            continue
         }
-        let {produced, consumed} = process_token(tokens[i], tokens, i, context, this_file)
+        let {produced, consumed} = process_token(tokens, i, context, this_file)
         i += consumed;
         if (allow) {
             processed = [...processed, ...produced]
@@ -262,7 +286,7 @@ function match_include(tokens, index) {
  * 
  * @param {Token[]} tokens 
  * @param {number} index
- * @param {string} this_file 
+ * @param {String} this_file 
  * @param {PreprocessorContext} context
  * @returns {PreprocessItemResult} The preprocessed tokens
  */
@@ -276,7 +300,7 @@ function process_include(tokens, index, this_file, context) {
 /**
  * 
  * @param {Token} include_file_token 
- * @param {string} this_file 
+ * @param {String} this_file 
  * @param {Config} config 
  * @returns {ReadFileResult}
  */
@@ -303,25 +327,54 @@ function read_file(include_file_token, this_file, config) {
  * @param {Object.<string,Token[]>} defines 
  */
 function match_defined_symbols(tokens, index, defines) {
-    return (tokens[index].content in defines)
+    return ((tokens[index].content in defines) || ["__LINE__","__DATE__","__TIME__"].includes(tokens[index].content))
+}
+
+
+/**
+ * 
+ * @param {String} define 
+ * @param {Token[]} tokens 
+ * @param {number} index 
+ * @return {String}
+ */
+function resolve_standard_define_string_content(define, tokens, index) {
+    switch (define) {
+        case "__LINE__": return `${tokens[index].line}`
+        case "__DATE__": {
+            const d = new Date()
+            return `${["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][d.getMonth()]} ${String(d.getDay()).padStart(2, "0")} ${d.getFullYear()}`
+        }
+        case "__TIME__": {
+            const d = new Date()
+            return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2, "0")}:${String(d.getSeconds()).padStart(2, "0")}`
+        }
+    }
 }
 
 /**
  * 
  * @param {Token[]} tokens 
  * @param {number} index 
- * @param {Object.<string,PreprocessorDefine>} defines
+ * @param {Object.<String,PreprocessorDefine>} defines
  * @param {PreprocessorContext} context 
  * @returns {PreprocessItemResult}
  */
 function substitute_defined(tokens, index, defines, context) {
     /** @type {Token[]} */
     let new_tokens = []
-    /** @type {Object.<string,Token[]>} */
+    /** @type {Object.<String,Token[]>} */
     let substitute_tokens = {}
 
+    let id = tokens[index].content;
+
+    if (["__LINE__","__DATE__","__TIME__"].includes(id)) {
+        // shortcut dynamic C defines application
+        return new PreprocessItemResult([new Token(string, resolve_standard_define_string_content(id, tokens, index), tokens[index].rep, tokens[index].r),], 1)
+    }
+
     /** @type {PreprocessorDefine} */
-    let define = defines[tokens[index].content];
+    let define = defines[id];
     let i = index + 1;
 
     const collectTokensUntilCloseParen = () => {
@@ -413,14 +466,13 @@ function substitute_defined(tokens, index, defines, context) {
 
 
 /**
- * 
- * @param {Token} token 
+ * Dispatches processing based on the token at index i
  * @param {Token[]} tokens 
  * @param {number} i 
  * @param {PreprocessorContext} context 
  * @returns {{produced:Token[], consumed:number}}
  */
-function process_token(token, tokens, i, context, this_file) {
+function process_token(tokens, i, context, this_file) {
     if (match_include(tokens, i)) {
         let this_file_body = context.defines["__FILE__"].body // back up __FILE__ (as it might have been changed by user code)
         let result = process_include(tokens, i, this_file, context)
@@ -432,8 +484,11 @@ function process_token(token, tokens, i, context, this_file) {
     } else if (match_ifdef(tokens, i)) {
         let result = process_ifdef(tokens, i, context, this_file)
         return {produced: result.produced, consumed: result.consumed}
+    } else if (match_else(tokens, i)) {
+        throw new PreprocessorError("unexpected #else", tokens[i].r, [])
+    } else if (match_endif(tokens, i)) {
+        throw new PreprocessorError("unexpected #endif", tokens[i].r, [])
     } else if (match_define(tokens, i)) {
-        // TODO flesh out
         let result = process_define(tokens, i, context)
         return {produced: result.produced, consumed: result.consumed}
     } else if (match_undef(tokens, i)) {
@@ -445,7 +500,7 @@ function process_token(token, tokens, i, context, this_file) {
         let result = substitute_defined(tokens, i, context.defines, context)
         return {produced: result.produced, consumed: result.consumed}
     } else {
-        return {produced: [token, ], consumed: 1}
+        return {produced: [tokens[i], ], consumed: 1}
     }
 }
 
@@ -463,7 +518,7 @@ function process(tokens, this_file, context) {
     let this_file_token = new Token(string, this_file)
     context.defines["__FILE__"] = new PreprocessorDefine("__FILE__", null, [this_file_token, ], -1)
     while (i < tokens.length) {
-        var {produced, consumed} = process_token(tokens[i], tokens, i, context, this_file);
+        var {produced, consumed} = process_token(tokens, i, context, this_file);
         i += consumed;
         processed = [...processed, ...produced]
     }
