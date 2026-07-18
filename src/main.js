@@ -16,7 +16,7 @@ let compile_target = await load_target("m68k")
 let defines = [] //[TODO] work on command line defines
 /**
  * Process a single file
- * @param {string} filename 
+ * @param {String} filename 
  * @param {Config} config 
  * @param {Object} args 
  */

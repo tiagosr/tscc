@@ -22,6 +22,7 @@ class CType {
      * @returns {boolean} True if compatible, false otherwise
      */
     weak_compat(other) {
+        (other)
         throw new NotImplementedError
     }
 
@@ -155,7 +156,7 @@ class FunctionCType extends CType {
 class UnionStructMemberCType {
     /**
      * 
-     * @param {string} name 
+     * @param {String} name 
      * @param {CType} type 
      */
     constructor(name, type) {
@@ -172,13 +173,13 @@ class UnionStructCTypeOffset {
 class UnionStructCType extends CType {
     /**
      * Base class for structs and unions
-     * @param {?string} tag Name of the struct/union, or null if anonymous
+     * @param {?String} tag Name of the struct/union, or null if anonymous
      * @param {?UnionStructMemberCType[]} [members] List of members
      */
     constructor(tag, members = null) {
         super(1)
         this.tag = tag
-        /** @type {Object.<string, UnionStructCTypeOffset>} */
+        /** @type {Object.<String, UnionStructCTypeOffset>} */
         this.offsets = {}
         /** @type {UnionStructMemberCType[]} */
         this.members = []
@@ -245,7 +246,7 @@ class UnionCType extends UnionStructCType {
 }
 
 
-export { CType, VoidCType, IntegerCType, PointerCType, FunctionCType, UnionStructCType, StructCType, UnionCType }
+export { CType, VoidCType, IntegerCType, PointerCType, FunctionCType, UnionStructMemberCType, UnionStructCType, StructCType, UnionCType }
 
 
 export const void_t = new VoidCType()
@@ -267,8 +268,8 @@ export const int_min = -2147483648
 
 export const long_t = new IntegerCType(8, true)
 export const unsigned_long_t = new IntegerCType(8, false)
-export const long_max = 9223372036854775807
-export const long_min = -9223372036854775808
+export const long_max = 9223372036854775807n
+export const long_min = -9223372036854775808n
 
 
 export const simple_types = {

@@ -46,7 +46,7 @@ arg_parser.add_argument("-D",
 
 /**
  * 
- * @param {string[]} [args] Optional string list with arguments
+ * @param {String[]} [args] Optional string list with arguments
  */
 export function parse_args(args=[]) {
     return arg_parser.parse_args(args)

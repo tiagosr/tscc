@@ -1,4 +1,4 @@
-import { pound, identifier as _identifier } from "../token_kinds.js";
+import { pound } from "../token_kinds.js";
 import { PreprocessorError } from "../errors.js";
 import { PreprocessItemResult } from "./PreprocessItemResult.js";
 import { StreamRange } from "../utils.js";
@@ -11,8 +11,8 @@ import { StreamRange } from "../utils.js";
  */
 export function match_undef(tokens, index) {
     return (
+        (index + 1) < tokens.length &&
         tokens[index].isKind(pound) &&
-        tokens[index + 1].isKind(_identifier) &&
         tokens[index + 1].content == "undef"
     )
 }
@@ -25,7 +25,7 @@ export function match_undef(tokens, index) {
  * @returns {PreprocessItemResult}
  */
 export function process_undef(tokens, i, context) {
-    if (i >= tokens.length) {
+    if ((i + 2) >= tokens.length) {
         throw new PreprocessorError("unexpected end-of-file when processing #undef", new StreamRange(tokens[tokens.length-1].r.end), [])
     }
     if (tokens[i + 2].content in context.defines) {

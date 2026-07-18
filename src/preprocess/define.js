@@ -1,4 +1,4 @@
-import { pound, identifier as _identifier, ellipsis, open_paren, close_paren, comma, define_placeholder, string } from "../token_kinds.js";
+import { pound, identifier_token, ellipsis, open_paren, close_paren, comma, define_placeholder, string_token } from "../token_kinds.js";
 import { PreprocessorError } from "../errors.js";
 import { StreamRange } from "../utils.js";
 import { PreprocessItemResult } from "./PreprocessItemResult.js";
@@ -13,9 +13,9 @@ import { Token } from "../tokens.js";
 export function match_define(tokens, index) {
     return (
         tokens[index].isKind(pound) &&
-        tokens[index + 1].isKind(_identifier) &&
+        tokens[index + 1].isKind(identifier_token) &&
         tokens[index + 1].content == "define" &&
-        tokens[index + 2].isKind(_identifier)
+        tokens[index + 2].isKind(identifier_token)
     );
 }
 
@@ -23,8 +23,8 @@ export class PreprocessorDefine {
 
     /**
      *
-     * @param {string} identifier
-     * @param {?string[]} parameters
+     * @param {String} identifier
+     * @param {?String[]} parameters
      * @param {Token[]} body
      * @param {number} variadic
      */
@@ -76,7 +76,7 @@ export function process_define(tokens, index, context) {
                         variadic = params.length - 1
                     }
                     expect_param = false
-                } else if (tokens[i].isKind(_identifier)) {
+                } else if (tokens[i].isKind(identifier_token)) {
                     if (variadic > 0) {
                         throw new PreprocessorError("invalid identifier after variadic parameter", tokens[i].r, [])
                     }
@@ -121,7 +121,7 @@ export function process_define(tokens, index, context) {
  * 
  * @param {Token[]} tokens 
  * @param {number} index 
- * @param {Object.<string,Token[]>} defines 
+ * @param {Object.<String,Token[]>} defines 
  */
 export function match_defined_symbols(tokens, index, defines) {
     return ((tokens[index].content in defines) || ["__LINE__","__DATE__","__TIME__"].includes(tokens[index].content))
@@ -167,8 +167,9 @@ export function substitute_defined(tokens, index, defines, context) {
 
     if (["__LINE__","__DATE__","__TIME__"].includes(id)) {
         // shortcut dynamic C defines application
-        return new PreprocessItemResult([new Token(string, resolve_standard_define_string_content(id, tokens, index), tokens[index].rep, tokens[index].r),], 1)
+        return new PreprocessItemResult([new Token(string_token, resolve_standard_define_string_content(id, tokens, index), tokens[index].rep, tokens[index].r),], 1)
     }
+    (context)
 
     /** @type {PreprocessorDefine} */
     let define = defines[id];

@@ -1,4 +1,4 @@
-import { pound, identifier as _identifier } from "../token_kinds.js";
+import { pound, identifier_token } from "../token_kinds.js";
 import { PreprocessItemResult } from "./PreprocessItemResult.js";
 
 
@@ -11,7 +11,7 @@ import { PreprocessItemResult } from "./PreprocessItemResult.js";
 export function match_if(tokens, index) {
     return (
         tokens[index].isKind(pound) &&
-        tokens[index + 1].isKind(_identifier) &&
+        tokens[index + 1].isKind(identifier_token) &&
         tokens[index + 1].content == "if"
     )
 }/**
@@ -21,7 +21,7 @@ export function match_if(tokens, index) {
  * @param {PreprocessorContext} context
  * @returns {PreprocessItemResult}
  */
-function process_if(tokens, index, context) {
+export function process_if(tokens, index, context) {
     if (tokens[index + 2].content == "1") {
 
         return new PreprocessItemResult()

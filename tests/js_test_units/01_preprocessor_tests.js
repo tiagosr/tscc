@@ -12,8 +12,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const fixtures_dir = path.join(__dirname, "fixtures")
 
 /**
- * @param {?string[]} sys_include_paths
- * @param {Object.<string, Token[]>} defines
+ * @param {?String[]} sys_include_paths
+ * @param {Object.<String, Token[]>} defines
  * @returns {PreprocessorContext}
  */
 function make_context(sys_include_paths = [], defines = {}) {
@@ -24,8 +24,8 @@ function make_context(sys_include_paths = [], defines = {}) {
 
 /**
  * Tokenize and preprocess a snippet of source as if it were `filename`.
- * @param {string} source
- * @param {string} filename
+ * @param {String} source
+ * @param {String} filename
  * @param {PreprocessorContext} context
  * @returns {Token[]}
  */
@@ -36,7 +36,7 @@ function preprocess_source(source, filename, context) {
 
 /**
  * @param {Token[]} tokens
- * @returns {string[]}
+ * @returns {String[]}
  */
 function contents(tokens) {
     return tokens.map((token) => token.content)

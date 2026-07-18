@@ -5,12 +5,12 @@ import { Console } from "console"
 class Config {
     /**
      * 
-     * @param {string} base_path Compiler base path
+     * @param {String} base_path Compiler base path
      * @param {boolean} [compiler_debug]
      */
     constructor(base_path, compiler_debug = false) {
         this.base_path = base_path
-        /** @type {string[]} */
+        /** @type {String[]} */
         this.sys_include_paths = []
         this.compiler_debug = compiler_debug
     }
@@ -52,7 +52,7 @@ class Context {
 
     /**
      * 
-     * @param {string} info 
+     * @param {String} info 
      * @returns {void}
      */
     emit_info(info) {
@@ -64,7 +64,7 @@ class PreprocessorContext extends Context {
     /**
      * 
      * @param {Config} config 
-     * @param {Object.<string, Token[]>} defines
+     * @param {Object.<String, Token[]>} defines
      */
     constructor(config, defines) {
         super(config)

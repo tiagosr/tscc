@@ -6,7 +6,7 @@ class CompilationTarget {
 
 /**
  * Loads a named architecture
- * @param {string} arch 
+ * @param {String} arch 
  * @returns {CompilationTarget}
  */
 async function load_target(arch) {

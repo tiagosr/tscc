@@ -27,7 +27,7 @@ class Loc {
 class RegLoc extends Loc {
     /**
      * 
-     * @param {string} name 
+     * @param {String} name 
      */
     constructor(name) {
         super(name)

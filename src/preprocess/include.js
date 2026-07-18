@@ -1,4 +1,4 @@
-import { pound, identifier as _identifier, include_file } from "../token_kinds.js";
+import { pound, identifier_token, include_file } from "../token_kinds.js";
 import { tokenize } from "../lexer.js"
 import { resolve } from "path"
 import { existsSync, readFileSync } from "fs"
@@ -15,7 +15,7 @@ import { process } from "./process.js";
 export function match_include(tokens, index) {
     return (
         tokens[index].isKind(pound) &&
-        tokens[index + 1].isKind(_identifier) &&
+        tokens[index + 1].isKind(identifier_token) &&
         tokens[index + 1].content == "include" &&
         tokens[index + 2].isKind(include_file)
     )
@@ -60,8 +60,8 @@ export function read_file(include_file_token, this_file, config) {
 }class ReadFileResult {
     /**
      *
-     * @param {string} file The file contents of an #include read
-     * @param {string} filename The absolute filename
+     * @param {String} file The file contents of an #include read
+     * @param {String} filename The absolute filename
      */
     constructor(file, filename) {
         this.file = file

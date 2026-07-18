@@ -52,10 +52,10 @@ class Range {
 class StreamPosition {
     /**
      * 
-     * @param {string} stream Name of the stream within which this position points
+     * @param {String} stream Name of the stream within which this position points
      * @param {number} line Line number in the stream at which this position points
      * @param {number} column Horizontal index within the line at which this position points
-     * @param {string} full_line Full text of the line containing this position
+     * @param {String} full_line Full text of the line containing this position
      */
     constructor(stream, line, column, full_line) {
         this.stream = stream

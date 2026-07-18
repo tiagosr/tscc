@@ -1,6 +1,5 @@
-import { StreamRange, StreamPosition } from "../utils.js"
-import { CompilerError, NotImplementedError } from "../errors.js"
-import { CompilerContext } from "../context.js"
+import { StreamRange } from "../utils.js"
+import { CompilerError } from "../errors.js"
 import { Token, TokenKind } from "../tokens.js"
 import format from "string-format"
 
@@ -10,7 +9,7 @@ const GOT = 3
 class ParserError extends CompilerError {
     /**
      * 
-     * @param {string} message 
+     * @param {String} message 
      * @param {number} index 
      * @param {Token[]} tokens 
      * @param {number} type 

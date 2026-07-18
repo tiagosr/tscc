@@ -1,4 +1,4 @@
-import { pound, identifier as _identifier } from "../token_kinds.js";
+import { pound, identifier_token } from "../token_kinds.js";
 import { PreprocessItemResult } from "./PreprocessItemResult.js";
 import { PreprocessorError } from "../errors.js";
 import { StreamRange } from "../utils.js";
@@ -14,9 +14,9 @@ import { process_token } from "./process.js";
 export function match_ifdef(tokens, index) {
     return (
         tokens[index].isKind(pound) &&
-        tokens[index + 1].isKind(_identifier) &&
+        tokens[index + 1].isKind(identifier_token) &&
         tokens[index + 1].content == "ifdef" &&
-        tokens[index + 2].isKind(_identifier)
+        tokens[index + 2].isKind(identifier_token)
     )
 }
 /**

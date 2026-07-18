@@ -3,9 +3,9 @@ import { StreamRange, StreamPosition } from "./utils.js"
 import { CompilerError } from "./errors.js"
 import { Token, TokenKind } from "./tokens.js"
 import { 
-    number, identifier, star, slash, 
+    number_token, identifier_token, star, slash, 
     include_file, dquote, squote, char_string, 
-    string, symbol_kinds, pound, keyword_kinds
+    string_token, symbol_kinds, pound, keyword_kinds
 } from "./token_kinds.js"
 import format from "string-format"
 
@@ -17,7 +17,7 @@ format.extend(String.prototype, {})
 class Tagged {
     /**
      * 
-     * @param {string} c The tagged character
+     * @param {String} c The tagged character
      * @param {StreamPosition} p 
      */
     constructor(c, p) {
@@ -29,8 +29,8 @@ class Tagged {
 
 /**
  * 
- * @param {string} stream 
- * @param {string} filename 
+ * @param {String} stream 
+ * @param {String} filename 
  * @param {CompilerContext} context
  */
 function tokenize(stream, filename, context) {
@@ -56,8 +56,8 @@ function tokenize(stream, filename, context) {
 
 /**
  * 
- * @param {string} text 
- * @param {string} filename 
+ * @param {String} text 
+ * @param {String} filename 
  * @returns {Tagged[][]}
  */
 function split_to_tagged_lines(text, filename) {
@@ -115,11 +115,11 @@ function chunk_to_tokens(chunk) {
         }
         const number_string = match_number_string(chunk)
         if (number_string) {
-            return [new Token(number, number_string, null, range), ]
+            return [new Token(number_token, number_string, null, range), ]
         }
         const identifier_name = match_identifier_name(chunk)
         if (identifier_name) {
-            return [new Token(identifier, identifier_name, null, range), ]
+            return [new Token(identifier_token, identifier_name, null, range), ]
         }
         throw new CompilerError("unrecognized token at {chk}".format({
             chk: chunk_to_string(chunk)
@@ -204,7 +204,7 @@ function tokenize_line(line, in_comment, context) {
             let add_null = false
             if (symbol_kind == dquote) {
                 quote_str = "\""
-                kind = string
+                kind = string_token
                 add_null = true
             }
             let {chars, length:end} = read_string(line, chunk_end + 1, quote_str, add_null)
@@ -250,7 +250,7 @@ function tokenize_line(line, in_comment, context) {
 /**
  * 
  * @param {Tagged} tagged 
- * @returns {string}
+ * @returns {String}
  */
 function TaggedToString(tagged) {
     return tagged.c
@@ -258,7 +258,7 @@ function TaggedToString(tagged) {
 /**
  * 
  * @param {Tagged[]} chunk 
- * @returns {string}
+ * @returns {String}
  */
 function chunk_to_string(chunk) {
     return chunk.map(TaggedToString).join("")
@@ -298,7 +298,7 @@ function match_symbol_kind_at(content, start) {
 function match_include_command(tokens) {
     return ((tokens.length == 2) &&
         tokens[0].isKind(pound) &&
-        tokens[1].isKind(identifier) &&
+        tokens[1].isKind(identifier_token) &&
         tokens[1].content == "include")
 }
 
@@ -318,7 +318,7 @@ class ReadString {
  * 
  * @param {Tagged[]} line 
  * @param {number} start 
- * @param {string} delim 
+ * @param {String} delim 
  * @param {boolean} append_null 
  * @returns {number[]}
  */
@@ -397,7 +397,7 @@ function read_string(line, start, delim, append_null) {
 class IncludeFilenameIndex {
     /**
      * 
-     * @param {string} filename 
+     * @param {String} filename 
      * @param {number} end 
      */
     constructor(filename, end) {
@@ -457,7 +457,7 @@ function match_keyword_kind(chunk) {
 /**
  * 
  * @param {Tagged[]} chunk 
- * @returns {?string}
+ * @returns {?String}
  */
 function match_number_string(chunk) {
     const token_str = chunk_to_string(chunk)
@@ -471,7 +471,7 @@ function match_number_string(chunk) {
 /**
  * 
  * @param {Tagged[]} chunk 
- * @returns {?string}
+ * @returns {?String}
  */
 function match_identifier_name(chunk) {
     const token_str = chunk_to_string(chunk)

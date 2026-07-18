@@ -102,7 +102,7 @@ class ParserContext {
      * @param {number} index 
      * @param {TokenKind} kind 
      * @param {number} message_type 
-     * @param {string} [message]
+     * @param {String} [message]
      * @returns {number}
      */
     match_token(index, kind, message_type, message = null) {
@@ -120,7 +120,7 @@ class ParserContext {
      * @param {number} index 
      * @param {TokenKind[]} kinds 
      * @param {number} message_type 
-     * @param {string} [message]
+     * @param {String} [message]
      * @returns {number}
      */
     match_token_kinds(index, kinds, message_type, message = null) {

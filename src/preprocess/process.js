@@ -1,5 +1,5 @@
 import { Token } from "../tokens.js"
-import { string } from "../token_kinds.js"
+import { string_token } from "../token_kinds.js"
 import { NotImplementedError, PreprocessorError } from "../errors.js"
 import { PreprocessorContext } from "../context.js"
 import { process_define, match_defined_symbols, match_define, substitute_defined, PreprocessorDefine } from "./define.js"
@@ -49,7 +49,7 @@ export function process_token(tokens, i, context, this_file) {
 /**
  * Do a preprocessor pass on the tokens generated from a file
  * @param {Token[]} tokens Input token list
- * @param {string} this_file The full path to the current file
+ * @param {String} this_file The full path to the current file
  * @param {PreprocessorContext} context 
  * @returns {Token[]} The preprocessed tokens
  */
@@ -57,7 +57,7 @@ export function process(tokens, this_file, context) {
     /** @type {Token[]} */
     let processed = []
     let i = 0
-    let this_file_token = new Token(string, this_file)
+    let this_file_token = new Token(string_token, this_file)
     context.defines["__FILE__"] = new PreprocessorDefine("__FILE__", null, [this_file_token, ], -1)
     while (i < tokens.length) {
         var {produced, consumed} = process_token(tokens, i, context, this_file);

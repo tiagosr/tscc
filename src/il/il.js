@@ -12,9 +12,9 @@ class ILContext {
      */
     constructor(context) {
         this.context = context
-        /** @type {Object.<string,IOp[]>} */
+        /** @type {Object.<String,IOp[]>} */
         this.ops = {}
-        /** @type {string} */
+        /** @type {String} */
         this.cur_func = null
         this.label_num = 0
         this.static_inits = {}
@@ -121,7 +121,7 @@ class SymbolTable {
         this.tables = []
         /** @type {Object.<IValue,number>} */
         this.linkage_type = {}
-        /** @type {Object.<number,Object.<string, IValue>>} */
+        /** @type {Object.<number,Object.<String, IValue>>} */
         this.linkages = {
             [SymbolTableLinkage.INTERNAL]: {},
             [SymbolTableLinkage.EXTERNAL]: {}
@@ -129,7 +129,7 @@ class SymbolTable {
         /** @type {Object.<IValue,SymbolTableDefinitionStatus>} */
         this.def_state = {}
 
-        /** @type {Object.<IValue,string>} */
+        /** @type {Object.<IValue,String>} */
         this.names = {}
     }
 }
@@ -151,7 +151,7 @@ class IOp {
     get indirect_write_vals() { return [] }
     /** @type {IValue[]} */
     get indirect_read_vals() { return [] }
-    /** @type {?string} */
+    /** @type {?String} */
     get label_name() { return null }
     get targets() { return [] }
     make_asm(spot_map, home_spots, get_reg, asm_code) {

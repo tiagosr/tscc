@@ -3,7 +3,7 @@ import { StreamRange, StreamPosition } from "./utils.js"
 class CompilerError extends Error {
     /**
      * 
-     * @param {string} description 
+     * @param {String} description 
      * @param {StreamRange} range 
      * @param {bool} warning 
      */
@@ -24,7 +24,7 @@ class NotImplementedError extends Error {
 class PreprocessorError extends Error {
     /**
      * 
-     * @param {string} description 
+     * @param {String} description 
      * @param {StreamRange} range 
      * @param {Token[]} processed 
      */
