@@ -5,7 +5,7 @@ import { NotImplementedError } from "../errors.js"
 export class Label extends IOp {
     /**
      * Label - maps to an assembler label
-     * @param {String} label 
+     * @param {string} label 
      */
     constructor(label) {
         super()
@@ -31,7 +31,7 @@ class ConditionalJump extends IOp {
     /**
      * 
      * @param {il.IValue} cond 
-     * @param {String} label 
+     * @param {string} label 
      */
     constructor(cond, label) {
         super()

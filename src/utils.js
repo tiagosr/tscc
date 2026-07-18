@@ -52,10 +52,10 @@ class Range {
 class StreamPosition {
     /**
      * 
-     * @param {String} stream Name of the stream within which this position points
+     * @param {string} stream Name of the stream within which this position points
      * @param {number} line Line number in the stream at which this position points
      * @param {number} column Horizontal index within the line at which this position points
-     * @param {String} full_line Full text of the line containing this position
+     * @param {string} full_line Full text of the line containing this position
      */
     constructor(stream, line, column, full_line) {
         this.stream = stream
@@ -79,7 +79,8 @@ class StreamRange {
     }
     /**
      * Creates a new range spanning from the start of this range to the end of the other range
-     * @param {StreamRange} other 
+     * @param {StreamRange} other range to concatenate
+     * @returns {StreamRange} continuous range encompassing the current and {@link other}
      */
     concat(other) {
         return new StreamRange(this.start, other.end)
@@ -87,10 +88,17 @@ class StreamRange {
 
     /**
      * Gets the line at the start of the range
-     * @returns {number}
+     * @returns {number} line at the start of the range
      */
     getLine() {
         return this.start.line
+    }
+
+    /**
+     * @returns {boolean} true if both start and end are in the same line
+     */
+    get isSingleLine() {
+        return this.start.line === this.end.line
     }
 }
 

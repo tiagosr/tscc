@@ -1,11 +1,12 @@
-import { StreamRange, StreamPosition } from "./utils.js"
+import { StreamRange } from "./utils.js"
+import { Token } from "./tokens.js"
 
 class CompilerError extends Error {
     /**
      * 
-     * @param {String} description 
+     * @param {string} description 
      * @param {StreamRange} range 
-     * @param {bool} warning 
+     * @param {boolean} warning 
      */
     constructor(description, range, warning) {
         super(`Compiler error: ${description}`)
@@ -24,7 +25,7 @@ class NotImplementedError extends Error {
 class PreprocessorError extends Error {
     /**
      * 
-     * @param {String} description 
+     * @param {string} description 
      * @param {StreamRange} range 
      * @param {Token[]} processed 
      */

@@ -3,7 +3,7 @@ import { StreamRange } from "./utils.js"
 class TokenKind {
     /**
      * 
-     * @param {String} text_repr
+     * @param {string} text_repr
      * Text representation of the type of this token
      * @param {TokenKind[]} kinds
      * List of kinds to which this particular kind is added
@@ -14,7 +14,7 @@ class TokenKind {
     }
 
     /**
-     * @returns {String}
+     * @returns {string}
      */
     toString() {
         return this.text_repr
@@ -25,8 +25,8 @@ class Token {
     /**
      * 
      * @param {TokenKind} kind 
-     * @param {String} content 
-     * @param {String} rep 
+     * @param {string} content 
+     * @param {string} rep 
      * @param {?StreamRange} r 
      */
     constructor(kind, content = "", rep = "", r = null) {
@@ -37,7 +37,7 @@ class Token {
     }
 
     /**
-     * @returns {String}
+     * @returns {string}
      */
     toString() {
         return this.rep || this.content
@@ -51,6 +51,7 @@ class Token {
     /**
      * 
      * @param {TokenKind} kind 
+     * @returns {boolean} true if token is of kind {@link kind}, false otherwise
      */
     isKind(kind) {
         return this.kind.text_repr == kind.text_repr

@@ -5,7 +5,7 @@ class CType {
     /**
      * 
      * @param {number} size Result of sizeof() on this type
-     * @param {bool} [is_const] True if type instances must be considered const
+     * @param {boolean} [is_const] True if type instances must be considered const
      */
     constructor(size, is_const = false) {
         this.size = size
@@ -43,6 +43,7 @@ class CType {
     /**
      * 
      * @param {CType} other Type to compare to
+     * @returns {boolean} true if types are compatible, false otherwise
      */
     compatible(other) {
         return this.weak_compat(other) && (this.is_const == other.is_const)
@@ -156,7 +157,7 @@ class FunctionCType extends CType {
 class UnionStructMemberCType {
     /**
      * 
-     * @param {String} name 
+     * @param {string} name 
      * @param {CType} type 
      */
     constructor(name, type) {
@@ -173,13 +174,13 @@ class UnionStructCTypeOffset {
 class UnionStructCType extends CType {
     /**
      * Base class for structs and unions
-     * @param {?String} tag Name of the struct/union, or null if anonymous
+     * @param {?string} tag Name of the struct/union, or null if anonymous
      * @param {?UnionStructMemberCType[]} [members] List of members
      */
     constructor(tag, members = null) {
         super(1)
         this.tag = tag
-        /** @type {Object.<String, UnionStructCTypeOffset>} */
+        /** @type {{[key:string]: UnionStructCTypeOffset}} */
         this.offsets = {}
         /** @type {UnionStructMemberCType[]} */
         this.members = []
@@ -208,6 +209,7 @@ class UnionStructCType extends CType {
      * @param {UnionStructMemberCType[]} members 
      */
     set_members(members) {
+        (members)
         throw new Error("not implemented")
     }
 }

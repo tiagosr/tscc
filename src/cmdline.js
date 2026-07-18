@@ -1,4 +1,4 @@
-import { ArgumentParser } from "argparse"
+import { ArgumentParser, Namespace } from "argparse"
 
 let arg_parser = new ArgumentParser({
     add_help: true,
@@ -46,7 +46,8 @@ arg_parser.add_argument("-D",
 
 /**
  * 
- * @param {String[]} [args] Optional string list with arguments
+ * @param {string[]} [args] Optional string list with arguments
+ * @returns {Namespace} arguments correctly parsed
  */
 export function parse_args(args=[]) {
     return arg_parser.parse_args(args)

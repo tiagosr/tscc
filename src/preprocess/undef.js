@@ -2,6 +2,8 @@ import { pound } from "../token_kinds.js";
 import { PreprocessorError } from "../errors.js";
 import { PreprocessItemResult } from "./PreprocessItemResult.js";
 import { StreamRange } from "../utils.js";
+import { Token } from "../tokens.js";
+import { PreprocessorContext } from "../context.js";
 
 /**
  *

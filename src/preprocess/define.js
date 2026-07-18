@@ -2,18 +2,18 @@ import { pound, identifier_token, ellipsis, open_paren, close_paren, comma, defi
 import { PreprocessorError } from "../errors.js";
 import { StreamRange } from "../utils.js";
 import { PreprocessItemResult } from "./PreprocessItemResult.js";
+import { PreprocessorContext } from "../context.js";
 import { Token } from "../tokens.js";
 
 /**
  *
  * @param {Token[]} tokens
  * @param {number} index
- * @returns {boolean}
+ * @returns {boolean} true if tokens match '#define'
  */
 export function match_define(tokens, index) {
     return (
         tokens[index].isKind(pound) &&
-        tokens[index + 1].isKind(identifier_token) &&
         tokens[index + 1].content == "define" &&
         tokens[index + 2].isKind(identifier_token)
     );
@@ -23,8 +23,8 @@ export class PreprocessorDefine {
 
     /**
      *
-     * @param {String} identifier
-     * @param {?String[]} parameters
+     * @param {string} identifier
+     * @param {?string[]} parameters
      * @param {Token[]} body
      * @param {number} variadic
      */
@@ -41,7 +41,7 @@ export class PreprocessorDefine {
  * @param {Token[]} tokens 
  * @param {number} index 
  * @param {PreprocessorContext} context 
- * @returns {PreprocessItemResult}
+ * @returns {PreprocessItemResult} produced/consumed tokens
  */
 export function process_define(tokens, index, context) {
     let body = []
@@ -121,7 +121,8 @@ export function process_define(tokens, index, context) {
  * 
  * @param {Token[]} tokens 
  * @param {number} index 
- * @param {Object.<String,Token[]>} defines 
+ * @param {{[key:string]: Token[]}} defines 
+ * @returns {boolean} true if token at {@link index} is a define
  */
 export function match_defined_symbols(tokens, index, defines) {
     return ((tokens[index].content in defines) || ["__LINE__","__DATE__","__TIME__"].includes(tokens[index].content))
@@ -130,10 +131,10 @@ export function match_defined_symbols(tokens, index, defines) {
 
 /**
  * 
- * @param {String} define 
+ * @param {string} define 
  * @param {Token[]} tokens 
  * @param {number} index 
- * @return {String}
+ * @returns {string} generated string content
  */
 function resolve_standard_define_string_content(define, tokens, index) {
     switch (define) {
@@ -153,14 +154,14 @@ function resolve_standard_define_string_content(define, tokens, index) {
  * 
  * @param {Token[]} tokens 
  * @param {number} index 
- * @param {Object.<String,PreprocessorDefine>} defines
+ * @param {{[key:string]: PreprocessorDefine}} defines
  * @param {PreprocessorContext} context 
- * @returns {PreprocessItemResult}
+ * @returns {PreprocessItemResult} produced/consumed tokens
  */
 export function substitute_defined(tokens, index, defines, context) {
     /** @type {Token[]} */
     let new_tokens = []
-    /** @type {Object.<String,Token[]>} */
+    /** @type {{[key:string]: Token[]}} */
     let substitute_tokens = {}
 
     let id = tokens[index].content;

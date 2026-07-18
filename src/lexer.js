@@ -17,7 +17,7 @@ format.extend(String.prototype, {})
 class Tagged {
     /**
      * 
-     * @param {String} c The tagged character
+     * @param {string} c The tagged character
      * @param {StreamPosition} p 
      */
     constructor(c, p) {
@@ -29,9 +29,10 @@ class Tagged {
 
 /**
  * 
- * @param {String} stream 
- * @param {String} filename 
+ * @param {string} stream 
+ * @param {string} filename 
  * @param {CompilerContext} context
+ * @returns {Token[]} tokenized stream
  */
 function tokenize(stream, filename, context) {
     /** @type {Token[]} */
@@ -56,8 +57,8 @@ function tokenize(stream, filename, context) {
 
 /**
  * 
- * @param {String} text 
- * @param {String} filename 
+ * @param {string} text 
+ * @param {string} filename 
  * @returns {Tagged[][]}
  */
 function split_to_tagged_lines(text, filename) {
@@ -250,7 +251,7 @@ function tokenize_line(line, in_comment, context) {
 /**
  * 
  * @param {Tagged} tagged 
- * @returns {String}
+ * @returns {string}
  */
 function TaggedToString(tagged) {
     return tagged.c
@@ -258,7 +259,7 @@ function TaggedToString(tagged) {
 /**
  * 
  * @param {Tagged[]} chunk 
- * @returns {String}
+ * @returns {string}
  */
 function chunk_to_string(chunk) {
     return chunk.map(TaggedToString).join("")
@@ -318,7 +319,7 @@ class ReadString {
  * 
  * @param {Tagged[]} line 
  * @param {number} start 
- * @param {String} delim 
+ * @param {string} delim 
  * @param {boolean} append_null 
  * @returns {number[]}
  */
@@ -397,7 +398,7 @@ function read_string(line, start, delim, append_null) {
 class IncludeFilenameIndex {
     /**
      * 
-     * @param {String} filename 
+     * @param {string} filename 
      * @param {number} end 
      */
     constructor(filename, end) {
@@ -412,17 +413,13 @@ class IncludeFilenameIndex {
  * @param {number} start 
  */
 function read_include_filename(line, start) {
-    let end = ""
+    let end
     if (start < line.length && line[start].c == "\"") {
         end = "\""
     } else if (start < line.length && line[start].c == "<") {
         end = ">"
     } else {
-        let char = line[line.length-1]
-        if (start < line.length) {
-            char = line[start]
-        }
-        throw new CompilerError("Expected \"FILENAME\" or <FILENAME> after include directive")
+        throw new CompilerError("Expected \"FILENAME\" or <FILENAME> after include directive", line[start].r)
     }
     let i = start + 1
     try {
@@ -457,7 +454,7 @@ function match_keyword_kind(chunk) {
 /**
  * 
  * @param {Tagged[]} chunk 
- * @returns {?String}
+ * @returns {?string}
  */
 function match_number_string(chunk) {
     const token_str = chunk_to_string(chunk)
@@ -471,7 +468,7 @@ function match_number_string(chunk) {
 /**
  * 
  * @param {Tagged[]} chunk 
- * @returns {?String}
+ * @returns {?string}
  */
 function match_identifier_name(chunk) {
     const token_str = chunk_to_string(chunk)

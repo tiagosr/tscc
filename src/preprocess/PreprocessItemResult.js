@@ -1,3 +1,5 @@
+import { Token } from "../tokens.js";
+
 export class PreprocessItemResult {
     /**
      * Utility class to specify results of a specific preprocessor transform

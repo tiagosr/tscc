@@ -3,6 +3,7 @@ import { NotImplementedError } from "../errors.js"
 import { CompilerContext } from "../context.js"
 import { Return } from "./control.js"
 import { LiteralValueLoc } from "./locations.js"
+import { CType } from "../ctypes.js"
 
 class ILContext {
 
@@ -12,9 +13,9 @@ class ILContext {
      */
     constructor(context) {
         this.context = context
-        /** @type {Object.<String,IOp[]>} */
+        /** @type {{[key:string]: IOp[]}} */
         this.ops = {}
-        /** @type {String} */
+        /** @type {string} */
         this.cur_func = null
         this.label_num = 0
         this.static_inits = {}
@@ -63,7 +64,7 @@ class ILContext {
 class IValue {
     /**
      * 
-     * @param {ctypes.CType} ctype 
+     * @param {CType} ctype 
      */
     constructor(ctype) {
         this.ctype = ctype
@@ -119,17 +120,17 @@ class SymbolTable {
     constructor() {
         /** @type {SymbolTableNamespaces[]} */
         this.tables = []
-        /** @type {Object.<IValue,number>} */
+        /** @type {{[key:IValue]: number}} */
         this.linkage_type = {}
-        /** @type {Object.<number,Object.<String, IValue>>} */
+        /** @type {{[key:number]: {[key:string]: IValue}}} */
         this.linkages = {
             [SymbolTableLinkage.INTERNAL]: {},
             [SymbolTableLinkage.EXTERNAL]: {}
         }
-        /** @type {Object.<IValue,SymbolTableDefinitionStatus>} */
+        /** @type {{[key:IValue]: SymbolTableDefinitionStatus}} */
         this.def_state = {}
 
-        /** @type {Object.<IValue,String>} */
+        /** @type {{[key:IValue]: string}} */
         this.names = {}
     }
 }
@@ -145,13 +146,13 @@ class IOp {
     get abs_spot_conflicts() { return {} }
     get rel_spot_prefs() { return {} }
     get abs_spot_prefs() { return {} }
-    /** @type {Object.<IValue,IValue[]>} */
+    /** @type {{[key:IValue]:IValue[]}} */
     get references() { return {} }
     /** @type {IValue[]} */
     get indirect_write_vals() { return [] }
     /** @type {IValue[]} */
     get indirect_read_vals() { return [] }
-    /** @type {?String} */
+    /** @type {?string} */
     get label_name() { return null }
     get targets() { return [] }
     make_asm(spot_map, home_spots, get_reg, asm_code) {

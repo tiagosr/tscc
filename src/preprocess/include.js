@@ -1,10 +1,13 @@
 import { pound, identifier_token, include_file } from "../token_kinds.js";
 import { tokenize } from "../lexer.js"
 import { resolve } from "path"
+import { process } from "./process.js";
 import { existsSync, readFileSync } from "fs"
+import { PreprocessorContext } from "../context.js";
 import { PreprocessItemResult } from "./PreprocessItemResult.js";
 import { PreprocessorError } from "../errors.js";
-import { process } from "./process.js";
+import { Token } from "../tokens.js";
+import { Config } from "../context.js";
 
 /**
  *
@@ -25,7 +28,7 @@ export function match_include(tokens, index) {
  * 
  * @param {Token[]} tokens 
  * @param {number} index
- * @param {String} this_file 
+ * @param {string} this_file 
  * @param {PreprocessorContext} context
  * @returns {PreprocessItemResult} The preprocessed tokens
  */
@@ -35,11 +38,22 @@ export function process_include(tokens, index, this_file, context) {
     return new PreprocessItemResult(new_tokens, 3)
 }
 
+export class ReadFileResult {
+    /**
+     *
+     * @param {string} file The file contents of an #include read
+     * @param {string} filename The absolute filename
+     */
+    constructor(file, filename) {
+        this.file = file
+        this.filename = filename
+    }
+}
 
 /**
  * 
  * @param {Token} include_file_token 
- * @param {String} this_file 
+ * @param {string} this_file 
  * @param {Config} config 
  * @returns {ReadFileResult}
  */
@@ -57,15 +71,5 @@ export function read_file(include_file_token, this_file, config) {
         }
     }
     throw new PreprocessorError("include file not found", include_file_token.r, [])
-}class ReadFileResult {
-    /**
-     *
-     * @param {String} file The file contents of an #include read
-     * @param {String} filename The absolute filename
-     */
-    constructor(file, filename) {
-        this.file = file
-        this.filename = filename
-    }
 }
 

@@ -1,6 +1,8 @@
 import { pound, identifier_token } from "../token_kinds.js";
 import { PreprocessItemResult } from "./PreprocessItemResult.js";
 import { PreprocessorError } from "../errors.js";
+import { PreprocessorContext } from "../context.js";
+import { Token } from "../tokens.js";
 import { StreamRange } from "../utils.js";
 import { process_token } from "./process.js";
 
@@ -9,7 +11,7 @@ import { process_token } from "./process.js";
  *
  * @param {Token[]} tokens
  * @param {number} index
- * @returns {boolean}
+ * @returns {boolean} true if tokens match '#ifdef <IDENTIFIER>'
  */
 export function match_ifdef(tokens, index) {
     return (
@@ -22,7 +24,7 @@ export function match_ifdef(tokens, index) {
  *
  * @param {Token[]} tokens
  * @param {number} index
- * @returns {boolean}
+ * @returns {boolean} true if tokens match '#ifndef <IDENTIFIER>'
  */
 export function match_ifndef(tokens, index) {
     return (
@@ -34,8 +36,8 @@ export function match_ifndef(tokens, index) {
 /**
  *
  * @param {Token[]} tokens
- * @param {int} index
- * @returns {boolean}
+ * @param {number} index
+ * @returns {boolean} true if tokens match '#else'
  */
 export function match_else(tokens, index) {
     return (
@@ -47,7 +49,7 @@ export function match_else(tokens, index) {
 /**
  * 
  * @param {Token[]} tokens 
- * @param {int} index 
+ * @param {number} index 
  * @returns {boolean}
  */
 export function match_endif(tokens, index) {
@@ -62,7 +64,8 @@ export function match_endif(tokens, index) {
  * @param {Token[]} tokens 
  * @param {number} index 
  * @param {PreprocessorContext} context 
- * @returns {PreprocessItemResult}
+ * @param {string} this_file 
+ * @returns {PreprocessItemResult} produced/consumed tokens
  */
 export function process_ifdef(tokens, index, context, this_file) {
     let allow = tokens[index + 1].content == "ifdef" ^ !(tokens[index + 2].content in context.defines)

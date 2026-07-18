@@ -1,4 +1,3 @@
-import { NotImplementedError, CompilerError } from "./errors.js"
 
 class CompilationTarget {
     
@@ -6,7 +5,7 @@ class CompilationTarget {
 
 /**
  * Loads a named architecture
- * @param {String} arch 
+ * @param {string} arch 
  * @returns {CompilationTarget}
  */
 async function load_target(arch) {

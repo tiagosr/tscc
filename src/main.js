@@ -1,4 +1,3 @@
-import os from "os"
 import { readFileSync } from "fs"
 import { resolve } from "path"
 import { tokenize } from "./lexer.js"
@@ -7,6 +6,7 @@ import { Config, PreprocessorContext, CompilerContext } from "./context.js"
 import { parse_args } from "./cmdline.js"
 import { load_target } from "./target.js"
 import { parse } from "./parser/parser.js"
+import process from "process"
 
 let args = parse_args(process.argv)
 
@@ -16,9 +16,9 @@ let compile_target = await load_target("m68k")
 let defines = [] //[TODO] work on command line defines
 /**
  * Process a single file
- * @param {String} filename 
+ * @param {string} filename 
  * @param {Config} config 
- * @param {Object} args 
+ * @param {object} args 
  */
 function process_file(filename, config, args) {
     let preprocess_context = new PreprocessorContext(config, defines)
