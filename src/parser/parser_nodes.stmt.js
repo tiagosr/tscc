@@ -199,7 +199,7 @@ export const parse_postfix = (index, ctx) => {
             continue
         }
         if (ctx.token_is(result.index, open_sq_brack)) {
-            let subscript = parse_expression(result.index + 1, this)
+            let subscript = parse_expression(result.index + 1, ctx)
             let end = ctx.match_token(subscript.index, close_sq_brack, AFTER)
             result = new NodeIndexPair(ctx.finish(new Index(result.node, subscript.node), start, end), end)
             continue

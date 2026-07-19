@@ -16,12 +16,12 @@ export const parse_typedef = (index, ctx) => {
         ctx.throw_error_got("expected 'typedef'", index)
     }
     const type_result = ctx.first_of(index + 1, [
-        (i, ctx) => ctx.parse_type(i)
+        parse_type,
     ], "expected a type definition after 'typedef'")
     /** @type {TypeInstance} */
     const spec = type_result.node
 
-    const new_typename_result = ctx.parse_new_type(type_result.index)
+    const new_typename_result = parse_new_type(type_result.index, ctx)
     /** @type {TypeIdentifier} */
     const typeid = new_typename_result.node
 
@@ -62,7 +62,31 @@ export const parse_new_type = (index, ctx) => {
 }
 
 
+const parse_single_symbol = (i, ctx) => {
+    if (ctx.token_is(i, identifier_token)) {
+        const id = ctx.tokens[i].content
+        if (!ctx.symbols.is_symbol_defined(id)) {
+            ctx.symbols.add_symbol(id, false)
+            return new NodeIndexPair(ctx.finish(new SymbolDeclaration(ctx.tokens[i].content), i, i + 1), i + 1)
+        }
+    }
+    return ctx.throw_error_got("expected variable identifier", i)
+}
 
+const parse_symbol_in_assignment = (i, ctx) => {
+    const assign_result = parse_assignment(i, ctx)
+    /** @type {Assignment} */
+    const assignment = assign_result.node
+    if (assignment.target instanceof Identifier) {
+        /** @type {Identifier} */
+        const target = assignment.target
+        if (!ctx.symbols.is_symbol_defined(target.name)) {
+            ctx.symbols.add_symbol(target.name, false)
+            return new NodeIndexPair(ctx.finish(assignment, i, assign_result.index), assign_result.index)
+        }
+    }
+    return ctx.throw_error_got("expected assignment to a new symbol", i)
+}
 /**
  * variable-declaration-item: [ '*' ]* identifier [ array-decl ]* [ '=' initializer ]
  * TODO - for now only:       identifier
@@ -73,31 +97,8 @@ export const parse_new_type = (index, ctx) => {
 export const parse_sym_decl_item = (index, ctx) => {
     return ctx.first_of(index,
         [
-            i => {
-                const assign_result = parse_assignment(i, ctx)
-                /** @type {Assignment} */
-                const assignment = assign_result.node
-                if (assignment.target instanceof Identifier)
-                {
-                    /** @type {Identifier} */
-                    const target = assignment.target
-                    if (!ctx.symbols.is_symbol_defined(target.name)) {
-                        ctx.symbols.add_symbol(target.name, false)
-                        return new NodeIndexPair(ctx.finish(assignment, i, assign_result.index), assign_result.index)
-                    }
-                }
-                return ctx.throw_error_got("expected assignment to a new symbol", i)
-            },
-            i => { // a simple identifier
-                if (ctx.token_is(i, identifier_token)) {
-                    const id = ctx.tokens[i].content
-                    if (!ctx.symbols.is_symbol_defined(id)) {
-                        ctx.symbols.add_symbol(id, false)
-                        return new NodeIndexPair(ctx.finish(new SymbolDeclaration(ctx.tokens[i].content), i, i), i)
-                    }
-                }
-                return ctx.throw_error_got("expected variable identifier", i)
-            }
+            parse_symbol_in_assignment,
+            parse_single_symbol
         ], "expected a variable declaration");
 }
 
@@ -123,7 +124,7 @@ export const parse_sym_decl = (index, ctx) => {
             index++; // comma, let's start a new one
         }
     }
-    return new NodeIndexPair(ctx.finish(new SymbolDeclaration(variable_nodes, type_result.node), start, index))
+    return new NodeIndexPair(ctx.finish(new SymbolDeclaration(variable_nodes, type_result.node), start, index), index)
 }
 
 
@@ -147,6 +148,6 @@ export const parse_root = (ctx) => {
         items.push(result.node)
         index = result.index
     }
-    return new NodeIndexPair(this.finish(new Root(items), 0, index))
+    return new NodeIndexPair(ctx.finish(new Root(items), 0, index), index)
 }
 

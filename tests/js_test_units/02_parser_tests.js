@@ -5,7 +5,10 @@ import { Config, CompilerContext } from "../../src/context.js"
 import { CompilationTarget } from "../../src/target.js"
 import { ParserContext } from "../../src/parser/parser.js"
 import { ParserError } from "../../src/parser/utils.js"
-import { parse_assignment, parse_binary, parse_conditional, parse_expr_statement, parse_expression, parse_statement, parse_unary } from "../../src/parser/parser_nodes.stmt.js"
+import {
+    parse_assignment, parse_binary, parse_conditional, parse_expr_statement, parse_expression,
+    parse_postfix, parse_primary, parse_statement, parse_unary
+} from "../../src/parser/parser_nodes.stmt.js"
 
 /**
  * @returns {CompilerContext}
@@ -77,21 +80,21 @@ describe("parser", function() {
     describe("parse_primary", function() {
         it("parses an identifier", function() {
             const p = parser_for("foo")
-            const result = p.parse_primary(0)
+            const result = parse_primary(0, p)
             assert.deepEqual(shape(result.node), id("foo"))
             assert.equal(result.index, 1)
         })
 
         it("parses a number literal", function() {
             const p = parser_for("42")
-            const result = p.parse_primary(0)
+            const result = parse_primary(0, p)
             assert.deepEqual(shape(result.node), num("42"))
             assert.equal(result.index, 1)
         })
 
         it("parses a string literal", function() {
             const p = parser_for("\"hi\"")
-            const result = p.parse_primary(0)
+            const result = parse_primary(0, p)
             // the lexer's string-token content is the char codes plus a trailing NUL, not a JS string
             assert.deepEqual(shape(result.node), { type: "String", raw: [104, 105, 0] })
             assert.equal(result.index, 1)
@@ -99,31 +102,31 @@ describe("parser", function() {
 
         it("parses a parenthesized expression, unwrapped", function() {
             const p = parser_for("(a)")
-            const result = p.parse_primary(0)
+            const result = parse_primary(0, p)
             assert.deepEqual(shape(result.node), id("a"))
             assert.equal(result.index, 3)
         })
 
         it("recurses through nested parentheses", function() {
             const p = parser_for("((a))")
-            const result = p.parse_primary(0)
+            const result = parse_primary(0, p)
             assert.deepEqual(shape(result.node), id("a"))
             assert.equal(result.index, 5)
         })
 
         it("throws a ParserError when nothing expression-shaped is there", function() {
             const p = parser_for(";")
-            assert.throws(function() { p.parse_primary(0) }, ParserError)
+            assert.throws(function() { parse_primary(0, p) }, ParserError)
         })
 
         it("throws a ParserError on an unmatched '('", function() {
             const p = parser_for("(a")
-            assert.throws(function() { p.parse_primary(0) }, ParserError)
+            assert.throws(function() { parse_primary(0, p) }, ParserError)
         })
 
         it("sets a source range spanning the parsed tokens", function() {
             const p = parser_for("foo")
-            const result = p.parse_primary(0)
+            const result = parse_primary(0, p)
             assert.notEqual(result.node.r, null)
             assert.equal(result.node.r.start.column, p.tokens[0].r.start.column)
         })
@@ -132,20 +135,20 @@ describe("parser", function() {
     describe("parse_postfix", function() {
         it("falls through to a bare primary expression", function() {
             const p = parser_for("a")
-            const result = p.parse_postfix(0)
+            const result = parse_postfix(0, p)
             assert.deepEqual(shape(result.node), id("a"))
         })
 
         it("parses a call with no arguments", function() {
             const p = parser_for("f()")
-            const result = p.parse_postfix(0)
+            const result = parse_postfix(0, p)
             assert.deepEqual(shape(result.node), { type: "Call", callee: id("f"), args: [] })
             assert.equal(result.index, 3)
         })
 
         it("parses a call with several arguments", function() {
             const p = parser_for("f(a, b, 1)")
-            const result = p.parse_postfix(0)
+            const result = parse_postfix(0, p)
             assert.deepEqual(shape(result.node), {
                 type: "Call", callee: id("f"), args: [id("a"), id("b"), num("1")]
             })
@@ -153,35 +156,35 @@ describe("parser", function() {
 
         it("parses array subscripting", function() {
             const p = parser_for("a[1]")
-            const result = p.parse_postfix(0)
+            const result = parse_postfix(0, p)
             assert.deepEqual(shape(result.node), { type: "Index", target: id("a"), index: num("1") })
         })
 
         it("parses member access with '.'", function() {
             const p = parser_for("a.b")
-            const result = p.parse_postfix(0)
+            const result = parse_postfix(0, p)
             assert.deepEqual(shape(result.node), { type: "Member", target: id("a"), name: "b", arrow: false })
         })
 
         it("parses member access with '->'", function() {
             const p = parser_for("a->b")
-            const result = p.parse_postfix(0)
+            const result = parse_postfix(0, p)
             assert.deepEqual(shape(result.node), { type: "Member", target: id("a"), name: "b", arrow: true })
         })
 
         it("parses postfix increment and decrement", function() {
             let p = parser_for("a++")
-            let result = p.parse_postfix(0)
+            let result = parse_postfix(0, p)
             assert.deepEqual(shape(result.node), { type: "Unary", op: "++", prefix: false, expr: id("a") })
 
             p = parser_for("a--")
-            result = p.parse_postfix(0)
+            result = parse_postfix(0, p)
             assert.deepEqual(shape(result.node), { type: "Unary", op: "--", prefix: false, expr: id("a") })
         })
 
         it("chains postfix operators left to right", function() {
             const p = parser_for("a.b[0](x)++")
-            const result = p.parse_postfix(0)
+            const result = parse_postfix(0, p)
             assert.deepEqual(shape(result.node), {
                 type: "Unary", op: "++", prefix: false,
                 expr: {
@@ -198,12 +201,12 @@ describe("parser", function() {
 
         it("throws a ParserError when a member name is missing", function() {
             const p = parser_for("a.")
-            assert.throws(function() { p.parse_postfix(0) }, ParserError)
+            assert.throws(function() { parse_postfix(0, p) }, ParserError)
         })
 
         it("throws a ParserError on an unterminated call", function() {
             const p = parser_for("f(a")
-            assert.throws(function() { p.parse_postfix(0) }, ParserError)
+            assert.throws(function() { parse_postfix(0, p) }, ParserError)
         })
     })
 
@@ -435,7 +438,7 @@ describe("parser", function() {
         it("returns the result of the first alternative that succeeds", function() {
             const p = parser_for("a")
             const result = p.first_of(0, [
-                i => p.parse_primary(i),
+                i => parse_primary(i, p),
             ])
             assert.deepEqual(shape(result.node), id("a"))
         })
@@ -444,7 +447,7 @@ describe("parser", function() {
             const p = parser_for("a")
             const result = p.first_of(0, [
                 i => { p.throw_error_got("this alternative never matches here", i) },
-                i => p.parse_primary(i),
+                i => parse_primary(i, p),
             ])
             assert.deepEqual(shape(result.node), id("a"))
         })
@@ -453,10 +456,10 @@ describe("parser", function() {
             const p = parser_for("a")
             p.first_of(0, [
                 i => {
-                    p.symbols.add_symbol({ context: "leaked" }, true)
+                    p.symbols.add_symbol("leaked", true)
                     p.throw_error_got("force a backtrack", i)
                 },
-                i => p.parse_primary(i),
+                i => parse_primary(i, p),
             ])
             assert.equal(p.symbols.symbols[0]["leaked"], undefined)
         })
@@ -477,10 +480,74 @@ describe("parser", function() {
             assert.throws(function() {
                 p.first_of(0, [
                     () => { throw new TypeError("boom") },
-                    i => { second_alternative_tried = true; return p.parse_primary(i) },
+                    i => { second_alternative_tried = true; return parse_primary(i, p) },
                 ])
             }, TypeError)
             assert.equal(second_alternative_tried, false)
+        })
+
+        describe("cut", function() {
+            it("without a cut, a failure still falls through to the next alternative (baseline)", function() {
+                const p = parser_for("a")
+                let second_alternative_tried = false
+                const result = p.first_of(0, [
+                    i => { p.throw_error_got("no cut here", i) },
+                    i => { second_alternative_tried = true; return parse_primary(i, p) },
+                ])
+                assert.equal(second_alternative_tried, true)
+                assert.deepEqual(shape(result.node), id("a"))
+            })
+
+            it("after a cut, a later failure in the same alternative skips the remaining alternatives", function() {
+                const p = parser_for("a")
+                let second_alternative_tried = false
+                assert.throws(function() {
+                    p.first_of(0, [
+                        i => {
+                            p.cut(i)
+                            p.throw_error_got("committed, then failed anyway", i)
+                        },
+                        i => { second_alternative_tried = true; return parse_primary(i, p) },
+                    ])
+                }, /committed, then failed anyway/)
+                assert.equal(second_alternative_tried, false)
+            })
+
+            it("a cut deep in a call chain still stops backtracking at every enclosing first_of", function() {
+                const p = parser_for("a")
+                let outer_fallback_tried = false
+                let inner_fallback_tried = false
+
+                // mimics: outer first_of choosing a statement kind, whose first
+                // alternative is itself a first_of over sub-cases, one of which
+                // cuts once it's seen unambiguous evidence and then fails deeper in
+                const inner_rule = (i) => p.first_of(i, [
+                    (j) => {
+                        p.cut(j) // e.g. "we just matched the unambiguous 'if (' prefix"
+                        p.throw_error_got("malformed condition", j)
+                    },
+                    (j) => { inner_fallback_tried = true; return parse_primary(j, p) },
+                ])
+
+                assert.throws(function() {
+                    p.first_of(0, [
+                        inner_rule,
+                        (i) => { outer_fallback_tried = true; return parse_primary(i, p) },
+                    ])
+                }, /malformed condition/)
+
+                assert.equal(inner_fallback_tried, false, "the inner first_of should not have tried its own fallback")
+                assert.equal(outer_fallback_tried, false, "the outer first_of should not have fallen back to an unrelated statement kind")
+            })
+
+            it("commitment doesn't leak into a sibling alternative that never cut", function() {
+                const p = parser_for("a")
+                const result = p.first_of(0, [
+                    i => { p.throw_error_got("first alternative fails before ever cutting", i) },
+                    i => parse_primary(i, p),
+                ])
+                assert.deepEqual(shape(result.node), id("a"))
+            })
         })
     })
 })

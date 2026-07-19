@@ -35,6 +35,27 @@ export class ParserContext {
         ].forEach(t => this.symbols.add_symbol(t, true))
         /** @type {ParserError} */
         this.best_error = null
+        /** @type {?number} token index of the current alternative's cut point, or null if uncommitted -- see {@link ParserContext#cut} */
+        this.committed_at = null
+    }
+
+    /**
+     * Commits the alternative currently being attempted, as of {@link index}:
+     * any ParserError raised afterward is tagged `.fatal` by the nearest
+     * enclosing {@link ParserContext#first_of}, which re-throws it immediately
+     * instead of trying a sibling alternative -- and every first_of further out
+     * on the call stack does the same, since the tag travels with the error
+     * object through however many frames it unwinds.
+     *
+     * Call this once a rule has seen something that could only mean it's on the
+     * right alternative (e.g. right after matching `if` `(`), so a mistake
+     * further in (a malformed condition) is reported as a real syntax error
+     * instead of being discarded while first_of tries something that could
+     * never have matched in the first place.
+     * @param {number} index
+     */
+    cut(index) {
+        this.committed_at = index
     }
 
     /**
@@ -133,6 +154,13 @@ export class ParserContext {
      * a symbol-table check, e.g. {@link SimpleSymbolTable} for typedef names)
      * can decide the branch, prefer that -- it's cheaper and gives better error
      * messages than discarding a whole failed parse.
+     *
+     * Respects {@link ParserContext#cut}: if a rule calls `ctx.cut(i)` and then
+     * fails, that failure is tagged `.fatal` and re-thrown immediately instead
+     * of being backtracked past -- no further alternative here is tried, and
+     * every first_of further out on the stack will see the same tag and do the
+     * same, so committing deep in a call chain still stops backtracking all the
+     * way up.
      * @param {number} index
      * @param {((index:number, ctx:ParserContext)=>NodeIndexPair)[]} rules alternatives to try, in priority order
      * @param {string} [message] used only if every alternative fails and somehow left no error behind
@@ -140,17 +168,29 @@ export class ParserContext {
      */
     first_of(index, rules, message = "expected one of several alternatives") {
         let symbols_bak = structuredClone(this.symbols)
+        let committed_bak = this.committed_at
         for (const rule of rules) {
+            this.committed_at = null
             try {
-                return rule(index, this)
+                let result = rule(index, this)
+                this.committed_at = committed_bak
+                return result
             } catch (e) {
                 if (!(e instanceof ParserError)) {
+                    this.committed_at = committed_bak
                     throw e
                 }
                 if (!this.best_error || e.amount_parsed >= this.best_error.amount_parsed) {
                     this.best_error = e
                 }
+                if (this.committed_at !== null) {
+                    e.fatal = true
+                }
                 this.symbols = symbols_bak
+                this.committed_at = committed_bak
+                if (e.fatal) {
+                    throw e
+                }
             }
         }
         throw this.best_error || new ParserError(message, index, this.tokens, GOT)
