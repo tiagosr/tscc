@@ -114,8 +114,8 @@ export class ParserContext {
         if (this.tokens.length == 0) {
             return new StreamRange(0, 0)
         }
-        let start_index = Math.min(start, this.tokens.length - 1, end - 1)
-        let end_index = Math.min(end - 1, this.tokens.length - 1)
+        let start_index = Math.max(0, Math.min(start, this.tokens.length - 1, end - 1))
+        let end_index = Math.max(0, Math.min(end - 1, this.tokens.length - 1))
         return this.tokens[start_index].r.concat(this.tokens[end_index].r)
     }
 

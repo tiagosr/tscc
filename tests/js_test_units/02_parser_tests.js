@@ -68,6 +68,8 @@ function shape(node) {
         return { type: "EmptyStatement" }
     case "ExprStatement":
         return { type: "ExprStatement", expr: shape(node.expr) }
+    case "IfStatement":
+        return { type: "IfStatement", cond: shape(node.cond), body: shape(node.body), else_stat: shape(node.else_stat) }
     
     case "TypeIdentifier":
         return { type: "TypeIdentifier", name: node.name }
@@ -430,7 +432,7 @@ describe("parser", function() {
     })
 
     describe("parse_statement", function() {
-        it("currently just delegates to parse_expr_statement via first_of", function() {
+        it("parses a simple statement", function() {
             const p = parser_for("a;")
             const result = parse_statement(0, p)
             assert.deepEqual(shape(result.node), { type: "ExprStatement", expr: id("a") })
@@ -439,6 +441,20 @@ describe("parser", function() {
         it("surfaces the underlying ParserError when its sole alternative fails", function() {
             const p = parser_for("a")
             assert.throws(() => { parse_statement(0, p) }, ParserError)
+        })
+
+        it("parses an if () statement", function() {
+            const p = parser_for("if (a) b;")
+            const result = parse_statement(0, p)
+            assert.deepEqual(shape(result.node), {
+                type: "IfStatement",
+                cond: id("a"),
+                body: {
+                    type: "ExprStatement",
+                    expr: id("b"),
+                },
+                else_stat: null
+            })
         })
     })
 

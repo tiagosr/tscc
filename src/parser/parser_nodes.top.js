@@ -15,6 +15,7 @@ export const parse_typedef = (index, ctx) => {
     if (!ctx.token_is(index, typedef_kw)) {
         ctx.throw_error_got("expected 'typedef'", index)
     }
+    ctx.cut(index + 1) // it's already a typedef: if there's an error, this should bubble up
     const type_result = ctx.first_of(index + 1, [
         parse_type,
     ], "expected a type definition after 'typedef'")
@@ -26,7 +27,7 @@ export const parse_typedef = (index, ctx) => {
     const typeid = new_typename_result.node
 
     if (!ctx.match_token(new_typename_result.index, semicolon)) {
-        return ctx.throw_error_got("expected ';' at end of typedef", new_typename_result.index)
+        return ctx.throw_error_got("expected ';' at end of typedef statement", new_typename_result.index)
     }
 
     return new NodeIndexPair(ctx.finish(new Typedef(typeid, spec), index, new_typename_result.index + 1), new_typename_result.index + 1)
@@ -107,7 +108,6 @@ const parse_symbol_in_assignment = (i, ctx) => {
 export const parse_sym_decl_item = (index, ctx) => {
     return ctx.first_of(index,
         [
-            parse_typedef,
             parse_symbol_in_assignment,
             parse_single_symbol
         ], "expected a variable declaration");
@@ -148,7 +148,7 @@ export const parse_root = (ctx) => {
     let index = 0
     let items = []
     for (;;) {
-        if (index >= ctx.tokens.length - 1) {
+        if (index >= ctx.tokens.length) {
             break;
         }
         let result = ctx.first_of(index, [

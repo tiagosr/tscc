@@ -1,6 +1,6 @@
 import { 
     Assignment, Binary, Call, EmptyStatement, ExprStatement,
-    Identifier, Index, Member, NumberLiteral, StringLiteral,
+    Identifier, IfStatement, Index, Member, NumberLiteral, Return, StringLiteral,
     Ternary, Unary 
 } from "../ast/nodes.js"
 import { NodeIndexPair, ParserContext } from "./parser.js"
@@ -15,6 +15,11 @@ import {
     equalequal, notequal, lt, gt, lt_eq, gt_eq,
     lshift, rshift, plus, minus, star, slash, mod,
     bool_not, compl, incr, decr, selfcomplement,
+    return_kw,
+    if_kw,
+    open_brack,
+    close_brack,
+    else_kw,
 } from "../token_kinds.js"
 
 /** C binary-operator precedence, low to high (assignment/ternary/comma are handled separately) */
@@ -41,7 +46,7 @@ const UNARY_PREFIX_OPS = [plus, minus, bool_not, compl, star, amp, incr, decr, s
 
 
 /**
- * statement: expression-statement
+ * statement: return-statement | expression-statement
  *
  * TODO: only one alternative exists so far. Once if/while/for/return/compound/
  * declaration statements are written, add them here as further alternatives
@@ -59,11 +64,79 @@ const UNARY_PREFIX_OPS = [plus, minus, bool_not, compl, star, amp, incr, decr, s
 export const parse_statement = (index, ctx) => {
     return ctx.with_range(() => {
         return ctx.first_of(index, [
+            parse_if_statement,
+            parse_return_statement,
             parse_expr_statement,
         ])
     })(index)
 }
 
+/**
+ * 
+ * @param {number} index 
+ * @param {ParserContext} ctx 
+ * @returns {NodeIndexPair}
+ */
+export const parse_return_statement = (index, ctx) => {
+    if (ctx.token_is(index, return_kw)) {
+        ctx.cut(index + 1)
+        if (ctx.token_is(index + 1, semicolon)) {
+            return new NodeIndexPair(ctx.finish(new Return(null), index, index + 1), index + 1)
+        } else {
+            /** @type {NodeIndexPair} */
+            const result = parse_expr_statement(index+1, ctx)
+            return new NodeIndexPair(ctx.finish(new Return(result.node), index, result.index), result.index)
+        }
+    }
+    return ctx.throw_error_got("expected 'return'", index)
+}
+
+/**
+ * 
+ * @param {number} index 
+ * @param {ParserContext} ctx 
+ * @returns {NodeIndexPair}
+ */
+export const parse_if_statement = (index, ctx) => {
+    if (ctx.token_is(index, if_kw)) {
+        let start = index
+        ctx.cut(index + 1) //  if we're already an 'if', this is a decision
+        if (!ctx.token_is(index + 1, open_paren)) {
+            return ctx.throw_error_got("expected '(' after 'if'", index + 1)
+        }
+        const condition_result = parse_expression(index + 1, ctx) // this will deal with open/close parens
+        /** @type {NodeIndexPair} */
+        let if_body_result
+        if (ctx.token_is(condition_result.index, open_brack)) {
+            // compound statement
+            if_body_result = ctx.multiple_of(condition_result.index + 1, parse_statement)
+
+            if (ctx.token_is(if_body_result.index, close_brack)) {
+                return ctx.throw_error_got("expected '}' or statement", if_body_result.index + 1)
+            }
+        } else {
+            if_body_result = parse_expr_statement(condition_result.index, ctx)
+        }
+        index = if_body_result.index
+        let else_result = null
+        if (ctx.token_is(if_body_result.index, else_kw)) {
+            if (ctx.token_is(if_body_result.index + 1, open_brack)) {
+                else_result = ctx.multiple_of(if_body_result.index + 2, parse_statement)
+                if (ctx.token_is(else_result.index, close_brack)) {
+                    return ctx.throw_error_got("expected '}' or statement", else_result.index + 1)
+                }
+            } else {
+                // deals with 'else if' on its own as well
+                else_result = parse_expr_statement(if_body_result.index, ctx)
+            }
+            index = else_result.index
+        }
+        return new NodeIndexPair(ctx.finish(
+            new IfStatement(condition_result.node, if_body_result.node, 
+                else_result !== null ? else_result.node : null), start, index), index)
+    }
+    return ctx.throw_error_got("expected 'if'", index)
+}
 
 export const parse_expr_statement = (index, ctx) => {
     return ctx.with_range(()=> {

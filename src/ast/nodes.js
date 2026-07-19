@@ -154,13 +154,13 @@ export class IfStatement extends Node {
     /**
      * 
      * @param {ExprStatement} cond 
-     * @param {ExprStatement} stat
-     * @param {ExprStatement} else_stat
+     * @param {ExprStatement|Compound} body
+     * @param {IfStatement|Compound|CollectionNode} else_stat
      */
-    constructor(cond, stat, else_stat) {
+    constructor(cond, body, else_stat) {
         super()
         this.cond = cond
-        this.stat = stat
+        this.body = body
         this.else_stat = else_stat
     }
     make_il(il_context, symbol_table, c) {
@@ -301,7 +301,6 @@ export class TypeInstance extends Node {
         super()
         this.name = name
     }
-
 }
 
 export class Typedef extends Node {
