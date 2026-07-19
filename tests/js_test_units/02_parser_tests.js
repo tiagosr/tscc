@@ -9,6 +9,7 @@ import {
     parse_assignment, parse_binary, parse_conditional, parse_expr_statement, parse_expression,
     parse_postfix, parse_primary, parse_statement, parse_unary
 } from "../../src/parser/parser_nodes.stmt.js"
+import { parse_root } from "../../src/parser/parser_nodes.top.js"
 
 /**
  * @returns {CompilerContext}
@@ -67,6 +68,13 @@ function shape(node) {
         return { type: "EmptyStatement" }
     case "ExprStatement":
         return { type: "ExprStatement", expr: shape(node.expr) }
+    
+    case "TypeIdentifier":
+        return { type: "TypeIdentifier", name: node.name }
+    case "Typedef":
+        return { type: "Typedef", name: shape(node.name), spec: shape(node.spec) }
+    case "Root":
+        return { type: "Root", nodes: node.items.map(shape) }
     default:
         throw new Error("shape: unhandled node type " + node.constructor.name)
     }
@@ -549,5 +557,41 @@ describe("parser", function() {
                 assert.deepEqual(shape(result.node), id("a"))
             })
         })
+    })
+
+    describe("Root", function() {
+        it("parses an empty program", function() {
+            const p = parser_for(" ")
+            const result = parse_root(p)
+            assert.deepEqual(shape(result.node), {type:"Root", nodes:[]})
+        })
+
+        it("correctly throws error on a malformed program", function() {
+            const p = parser_for("int ")
+            assert.throws(() => { parse_root(p)}, ParserError)
+        })
+
+        describe("Typedef", function() {
+            it("correctly parses a typedef from one of the base types", function() {
+                const p = parser_for("typedef int some_type;")
+                const result = parse_root(p)
+                assert.deepEqual(shape(result.node), {
+                    type: "Root",
+                    nodes:[{
+                        type: "Typedef",
+                        name: {
+                            type: "TypeIdentifier",
+                            name: "some_type"
+                        },
+                        spec: {
+                            type: "TypeIdentifier",
+                            name: "int"
+                        }
+                    }]
+                })
+            })
+        })
+
+
     })
 })

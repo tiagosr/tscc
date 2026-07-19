@@ -1,5 +1,5 @@
 import { Assignment, Identifier, Root, SymbolDeclaration, Typedef, TypeIdentifier, TypeInstance } from "../ast/nodes.js"
-import { colon, identifier_token, semicolon, typedef_kw } from "../token_kinds.js"
+import { bool_kw, char_kw, colon, identifier_token, int_kw, long_kw, semicolon, short_kw, signed_kw, typedef_kw, unsigned_kw, void_kw } from "../token_kinds.js"
 import { ParserContext, NodeIndexPair } from "./parser.js"
 import { parse_assignment } from "./parser_nodes.stmt.js"
 
@@ -12,7 +12,7 @@ import { parse_assignment } from "./parser_nodes.stmt.js"
  * @returns {NodeIndexPair}
  */
 export const parse_typedef = (index, ctx) => {
-    if (ctx.token_is(index, typedef_kw)) {
+    if (!ctx.token_is(index, typedef_kw)) {
         ctx.throw_error_got("expected 'typedef'", index)
     }
     const type_result = ctx.first_of(index + 1, [
@@ -35,7 +35,13 @@ export const parse_typedef = (index, ctx) => {
      * @returns {NodeIndexPair}
      */
 export const parse_type = (index, ctx) => {
-    if (ctx.token_is(index, identifier_token)) {
+    if (ctx.token_in(index, [
+        void_kw, char_kw, short_kw, int_kw, long_kw, // float_kw, double_kw,
+        signed_kw, unsigned_kw, bool_kw, // complex_kw
+    ])) {
+        const id = ctx.tokens[index].content;
+        return new NodeIndexPair(ctx.finish(new TypeIdentifier(id), index, index + 1), index + 1)
+    } else if (ctx.token_is(index, identifier_token)) {
         const id = ctx.tokens[index].content;
         if (ctx.symbols.is_symbol_typedef(id)) {
             return new NodeIndexPair(ctx.finish(new TypeIdentifier(id), index, index + 1), index + 1)
@@ -97,6 +103,7 @@ const parse_symbol_in_assignment = (i, ctx) => {
 export const parse_sym_decl_item = (index, ctx) => {
     return ctx.first_of(index,
         [
+            parse_typedef,
             parse_symbol_in_assignment,
             parse_single_symbol
         ], "expected a variable declaration");
@@ -136,9 +143,8 @@ export const parse_sym_decl = (index, ctx) => {
 export const parse_root = (ctx) => {
     let index = 0
     let items = []
-
     for (;;) {
-        if (index >= ctx.tokens.length) {
+        if (index >= ctx.tokens.length - 1) {
             break;
         }
         let result = ctx.first_of(index, [

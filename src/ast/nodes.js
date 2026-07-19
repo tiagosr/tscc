@@ -20,7 +20,7 @@ export class Node {
     get superType() { return Node.type }
 }
 
-export class SequenceNode extends Node {
+export class CollectionNode extends Node {
 
     /**
      * 
@@ -30,34 +30,33 @@ export class SequenceNode extends Node {
         super()
         this.items = items
     }
-    static get type() { return Symbol("Node") }
-    get type() { return Node.type }
+    static get type() { return Symbol("CollectionNode") }
+    get type() { return CollectionNode.type }
     get superType() { return Node.type }
 }
 
-export class Root extends Node {
+export class Root extends CollectionNode {
     /**
      * 
      * @param {Node[]} nodes 
      */
     constructor(nodes) {
-        super()
-        this.nodes = nodes
+        super(nodes)
     }
 
     make_il(il_context, symbol_table) {
-        for (const node of this.nodes) {
+        for (const node of this.items) {
             node.make_il(il_context, symbol_table)
         }
     }
     static get type() { return Symbol("Root") }
     get type() { return Root.type }
+    get superType() { return CollectionNode.type }
 }
 
-export class Compound extends Node {
+export class Compound extends CollectionNode {
     constructor(nodes) {
-        super()
-        this.nodes = nodes
+        super(nodes)
     }
     make_il(il_context, symbol_table, no_scope = false) {
         if (!no_scope) {
@@ -72,9 +71,14 @@ export class Compound extends Node {
     }
     static get type() { return Symbol("Compound") }
     get type() { return Compound.type }
+    get superType() { return CollectionNode.type }
 }
 
 export class Return extends Node {
+    /**
+     * 
+     * @param {?Node} return_value 
+     */
     constructor(return_value) {
         super()
         this.return_value = return_value
@@ -142,6 +146,8 @@ export class ExprStatement extends Node {
     make_il(il_context, symbol_table, c) {
         this.expr.make_il(il_context, symbol_table, c)
     }
+    static get type() { return Symbol("ExprStatement") }
+    get type() { return ExprStatement.type }
 }
 
 export class IfStatement extends Node {

@@ -1,8 +1,9 @@
 import { ParserError, SimpleSymbolTable, AT, GOT, AFTER } from "./utils.js"
-import { Root, Node, SequenceNode } from "../ast/nodes.js"
+import { Root, Node, CollectionNode } from "../ast/nodes.js"
 import { Token, TokenKind } from "../tokens.js"
 import { CompilerContext } from "../context.js"
 import { parse_root } from "./parser_nodes.top.js"
+import { StreamRange } from "../utils.js"
 
 export class NodeIndexPair {
     /**
@@ -110,6 +111,9 @@ export class ParserContext {
      * @returns {StreamRange} range spanning both entries
      */
     token_range(start, end) {
+        if (this.tokens.length == 0) {
+            return new StreamRange(0, 0)
+        }
         let start_index = Math.min(start, this.tokens.length - 1, end - 1)
         let end_index = Math.min(end - 1, this.tokens.length - 1)
         return this.tokens[start_index].r.concat(this.tokens[end_index].r)
@@ -214,7 +218,7 @@ export class ParserContext {
                 nodes.push(result.node)
                 index = result.index
             }
-            return new NodeIndexPair(this.finish(new SequenceNode(nodes), start, index), index)
+            return new NodeIndexPair(this.finish(new CollectionNode(nodes), start, index), index)
         } catch (e) {
             if (!(e instanceof ParserError)) {
                 throw e
@@ -260,7 +264,7 @@ export class ParserContext {
                 this.symbols = symbols_bak
                 if (!exceeded) {
                     if (nodes.length >= min) {
-                        return new NodeIndexPair(this.finish(new SequenceNode(nodes), start, index), index)
+                        return new NodeIndexPair(this.finish(new CollectionNode(nodes), start, index), index)
                     }
                     if (!this.best_error || index >= this.best_error.amount_parsed) {
                         this.best_error = new ParserError(message_min || `expected ${min} matches of ${element_name}, got ${nodes.length}`, index, this.tokens, AT)
