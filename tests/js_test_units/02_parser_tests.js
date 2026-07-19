@@ -70,6 +70,8 @@ function shape(node) {
         return { type: "ExprStatement", expr: shape(node.expr) }
     case "IfStatement":
         return { type: "IfStatement", cond: shape(node.cond), body: shape(node.body), else_stat: shape(node.else_stat) }
+    case "WhileStatement":
+        return { type: "WhileStatement", cond: shape(node.cond), body: shape(node.body), is_post: node.is_post }
     
     case "TypeIdentifier":
         return { type: "TypeIdentifier", name: node.name }
@@ -454,6 +456,37 @@ describe("parser", function() {
                     expr: id("b"),
                 },
                 else_stat: null
+            })
+        })
+
+        it("parses an if () else statement", function() {
+            const p = parser_for("if (a) b; else c;")
+            const result = parse_statement(0, p)
+            assert.deepEqual(shape(result.node), {
+                type: "IfStatement",
+                cond: id("a"),
+                body: {
+                    type: "ExprStatement",
+                    expr: id("b"),
+                },
+                else_stat: {
+                    type: "ExprStatement",
+                    expr: id("c")
+                }
+            })
+        })
+
+        it("parses a while () statement", function() {
+            const p = parser_for("while (a) b;")
+            const result = parse_statement(0, p)
+            assert.deepEqual(shape(result.node), {
+                type: "WhileStatement",
+                cond: id("a"),
+                body: {
+                    type: "ExprStatement",
+                    expr: id("b"),
+                },
+                is_post: false
             })
         })
     })

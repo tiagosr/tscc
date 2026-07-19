@@ -1,10 +1,11 @@
 import { 
-    Assignment, Binary, Call, EmptyStatement, ExprStatement,
+    Assignment, Binary, Break, Call, Continue, EmptyStatement, ExprStatement,
     Identifier, IfStatement, Index, Member, NumberLiteral, Return, StringLiteral,
-    Ternary, Unary 
+    Ternary, Unary, 
+    WhileStatement
 } from "../ast/nodes.js"
 import { NodeIndexPair, ParserContext } from "./parser.js"
-import { AFTER } from "./utils.js"
+import { AFTER, AT } from "./utils.js"
 import {
     semicolon, comma, colon, q_mark,
     identifier_token, number_token, string_token,
@@ -20,7 +21,12 @@ import {
     open_brack,
     close_brack,
     else_kw,
+    break_kw,
+    continue_kw,
+    while_kw,
+    do_kw,
 } from "../token_kinds.js"
+import { parse_sym_decl } from "./parser_nodes.top.js"
 
 /** C binary-operator precedence, low to high (assignment/ternary/comma are handled separately) */
 const BINARY_PRECEDENCE = new Map([
@@ -46,12 +52,12 @@ const UNARY_PREFIX_OPS = [plus, minus, bool_not, compl, star, amp, incr, decr, s
 
 
 /**
- * statement: return-statement | expression-statement
+ * statement: if-statement | while-statement | return-statement | break-statement | continue-statement | expression-statement
  *
- * TODO: only one alternative exists so far. Once if/while/for/return/compound/
- * declaration statements are written, add them here as further alternatives
- * to first_of, most-specific first, keeping parse_expr_statement last as the
- * catch-all. Alternatives that start with an unambiguous keyword (if, while,
+ * TODO: Once if/while/for/return/compound/declaration statements are written,
+ * add them here as further alternatives to first_of, most-specific first,
+ * keeping parse_expr_statement last as the catch-all.
+ * Alternatives that start with an unambiguous keyword (if, while,
  * return, ...) don't actually need first_of's backtracking -- a plain
  * token_is/token_in dispatch on the leading token is enough and gives better
  * errors. first_of only earns its cost for genuinely ambiguous leads, e.g.
@@ -65,7 +71,12 @@ export const parse_statement = (index, ctx) => {
     return ctx.with_range(() => {
         return ctx.first_of(index, [
             parse_if_statement,
+            parse_while_statement,
+            parse_do_while_statement,
             parse_return_statement,
+            parse_break_statement,
+            parse_continue_statement,
+            parse_sym_decl,
             parse_expr_statement,
         ])
     })(index)
@@ -97,47 +108,133 @@ export const parse_return_statement = (index, ctx) => {
  * @param {ParserContext} ctx 
  * @returns {NodeIndexPair}
  */
-export const parse_if_statement = (index, ctx) => {
-    if (ctx.token_is(index, if_kw)) {
-        let start = index
-        ctx.cut(index + 1) //  if we're already an 'if', this is a decision
-        if (!ctx.token_is(index + 1, open_paren)) {
-            return ctx.throw_error_got("expected '(' after 'if'", index + 1)
-        }
-        const condition_result = parse_expression(index + 1, ctx) // this will deal with open/close parens
-        /** @type {NodeIndexPair} */
-        let if_body_result
-        if (ctx.token_is(condition_result.index, open_brack)) {
-            // compound statement
-            if_body_result = ctx.multiple_of(condition_result.index + 1, parse_statement)
-
-            if (ctx.token_is(if_body_result.index, close_brack)) {
-                return ctx.throw_error_got("expected '}' or statement", if_body_result.index + 1)
-            }
-        } else {
-            if_body_result = parse_expr_statement(condition_result.index, ctx)
-        }
-        index = if_body_result.index
-        let else_result = null
-        if (ctx.token_is(if_body_result.index, else_kw)) {
-            if (ctx.token_is(if_body_result.index + 1, open_brack)) {
-                else_result = ctx.multiple_of(if_body_result.index + 2, parse_statement)
-                if (ctx.token_is(else_result.index, close_brack)) {
-                    return ctx.throw_error_got("expected '}' or statement", else_result.index + 1)
-                }
-            } else {
-                // deals with 'else if' on its own as well
-                else_result = parse_expr_statement(if_body_result.index, ctx)
-            }
-            index = else_result.index
-        }
-        return new NodeIndexPair(ctx.finish(
-            new IfStatement(condition_result.node, if_body_result.node, 
-                else_result !== null ? else_result.node : null), start, index), index)
-    }
-    return ctx.throw_error_got("expected 'if'", index)
+const parse_break_statement = (index, ctx) => {
+    ctx.match_token(index, break_kw, AT)
+    const end = ctx.match_token(index + 1, semicolon, AFTER)
+    return new NodeIndexPair(ctx.finish(new Break(), index, end), end)
 }
 
+/**
+ * 
+ * @param {number} index 
+ * @param {ParserContext} ctx 
+ * @returns {NodeIndexPair}
+ */
+const parse_continue_statement = (index, ctx) => {
+    ctx.match_token(index, continue_kw, AT)
+    const end = ctx.match_token(index + 1, semicolon, AFTER)
+    return new NodeIndexPair(ctx.finish(new Continue(), index, end), end)
+}
+
+
+/**
+ * 
+ * @param {number} index 
+ * @param {ParserContext} ctx 
+ * @returns {NodeIndexPair}
+ */
+export const parse_if_statement = (index, ctx) => {
+    ctx.match_token(index, if_kw, AT)
+    let start = index
+    ctx.cut(index + 1) //  if we're already an 'if', this is a decision
+    if (!ctx.token_is(index + 1, open_paren)) {
+        return ctx.throw_error_got("expected '(' after 'if'", index + 1)
+    }
+    const condition_result = parse_expression(index + 1, ctx) // this will deal with open/close parens
+    /** @type {NodeIndexPair} */
+    let if_body_result
+    if (ctx.token_is(condition_result.index, open_brack)) {
+        // compound statement
+        if_body_result = ctx.multiple_of(condition_result.index + 1, parse_statement)
+
+
+        if (ctx.token_is(if_body_result.index, close_brack)) {
+            return ctx.throw_error_got("expected '}' or statement", if_body_result.index + 1)
+        }
+    } else {
+        if_body_result = parse_expr_statement(condition_result.index, ctx)
+    }
+    index = if_body_result.index
+    let else_result = null
+    if (ctx.token_is(if_body_result.index, else_kw)) {
+        if (ctx.token_is(if_body_result.index + 1, open_brack)) {
+            else_result = ctx.multiple_of(if_body_result.index + 2, parse_statement)
+            index = ctx.match_token(else_result.index, close_brack, AT, "expected '}' or statement")
+        } else {
+            // deals with 'else if' on its own as well
+            else_result = parse_expr_statement(if_body_result.index + 1, ctx)
+            index = else_result.index
+        }
+    }
+    return new NodeIndexPair(ctx.finish(
+        new IfStatement(condition_result.node, if_body_result.node, 
+            else_result !== null ? else_result.node : null), start, index), index)
+}
+
+/**
+ * 
+ * @param {number} index 
+ * @param {ParserContext} ctx 
+ * @returns {NodeIndexPair}
+ */
+export const parse_while_statement = (index, ctx) => {
+    ctx.match_token(index, while_kw, AT)
+    let start = index
+    ctx.cut(index + 1) //  if we're already an 'if', this is a decision
+    ctx.match_token(index + 1, open_paren, AFTER, "expected '(' after 'while'")
+    const condition_result = parse_expression(index + 1, ctx) // this will deal with open/close parens
+    /** @type {NodeIndexPair} */
+    let body_result
+    if (ctx.token_is(condition_result.index, open_brack)) {
+        // compound statement
+        body_result = ctx.multiple_of(condition_result.index + 1, parse_statement)
+        index = ctx.match_token(body_result.index, close_brack, AT, "expected '}' or statement")
+    } else {
+        body_result = parse_expr_statement(condition_result.index, ctx)
+        index = body_result.index
+    }
+    return new NodeIndexPair(ctx.finish(
+        new WhileStatement(condition_result.node, body_result.node), start, index), index)
+}
+
+/**
+ * 
+ * @param {number} index 
+ * @param {ParserContext} ctx 
+ * @returns {NodeIndexPair}
+ */
+export const parse_do_while_statement = (index, ctx) => {
+    ctx.match_token(index, do_kw, AT)
+    let start = index
+    ctx.cut(index + 1) //  if we're already an 'if', this is a decision
+    /** @type {NodeIndexPair} */
+    let body_result
+    if (ctx.token_is(index + 1, open_brack)) {
+        // compound statement
+        body_result = ctx.multiple_of(index + 2, parse_statement)
+        index = ctx.match_token(body_result.index, close_brack, AT, "expected '}' or statement")
+            
+    } else {
+        body_result = parse_expr_statement(condition_result.index, ctx)
+        index = body_result.index
+    }
+    ctx.match_token(index, while_kw, AFTER)
+    ctx.match_token(index + 1, open_paren, AFTER)
+    const condition_result = parse_expression(index + 1, ctx) // this will deal with open/close parens
+    index = condition_result.index;
+    index = ctx.match_token(index, semicolon, AFTER)
+
+    return new NodeIndexPair(ctx.finish(
+        new WhileStatement(condition_result.node, body_result.node, true), start, index), index)
+}
+
+
+/**
+ * 
+ * @param {number} index 
+ * @param {ParserContext} ctx 
+ * @returns {NodeIndexPair}
+ */
 export const parse_expr_statement = (index, ctx) => {
     return ctx.with_range(()=> {
         if (ctx.token_is(index, semicolon)) {
@@ -284,7 +381,7 @@ export const parse_postfix = (index, ctx) => {
             result = new NodeIndexPair(ctx.finish(new Member(result.node, name, is_arrow), start, name_index), name_index)
             continue
         }
-        if (ctx.token_in(result.index, [incr, decr])) {
+        if (ctx.token_in(result.index, [incr, decr, selfcomplement])) {
             let op = ctx.kind_at(result.index)
             let end = result.index + 1
             result = new NodeIndexPair(ctx.finish(new Unary(op, result.node, false), start, end), end)

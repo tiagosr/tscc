@@ -169,6 +169,25 @@ export class IfStatement extends Node {
     }
 }
 
+export class WhileStatement extends Node {
+    /**
+     * 
+     * @param {ExprStatement} cond 
+     * @param {ExprStatement|Compound} body
+     * @param {boolean} [is_post=false] true if `do {} while(...)`, default false for `while(...) {}`
+     */
+    constructor(cond, body, is_post = false) {
+        super()
+        this.cond = cond
+        this.body = body
+        this.is_post = is_post
+    }
+    make_il(il_context, symbol_table, c) {
+        let endif_label = il_context.get_label()
+
+    }
+}
+
 export class Identifier extends Node {
     constructor(name) {
         super()
