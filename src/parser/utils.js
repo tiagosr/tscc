@@ -62,6 +62,13 @@ class SimpleSymbolTable {
         this.symbols = []
         this.new_scope()
     }
+
+    copy() {
+        let new_table = new SimpleSymbolTable()
+        new_table.symbols = structuredClone(this.symbols)
+        return new_table
+    }
+
     new_scope() {
         this.symbols.push({})
     }

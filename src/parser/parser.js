@@ -171,7 +171,7 @@ export class ParserContext {
      * @returns {NodeIndexPair}
      */
     first_of(index, rules, message = "expected one of several alternatives") {
-        let symbols_bak = structuredClone(this.symbols)
+        let symbols_bak = this.symbols.copy()
         let committed_bak = this.committed_at
         for (const rule of rules) {
             this.committed_at = null
@@ -209,7 +209,7 @@ export class ParserContext {
      * @returns {NodeIndexPair}
      */
     sequence_of(index, rules, message = "expected a sequence of tokens") {
-        let symbols_bak = structuredClone(this.symbols)
+        let symbols_bak = this.symbols.copy()
         try {
             let start = index
             let nodes = []
@@ -249,7 +249,7 @@ export class ParserContext {
         let exceeded = false
         for (;;) {
             try {
-                symbols_bak = structuredClone(this.symbols)
+                symbols_bak = this.symbols.copy()
                 let result = rule(index)
                 if (max > 0 && max >= nodes.length) {
                     exceeded = true;
