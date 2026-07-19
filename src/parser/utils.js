@@ -48,6 +48,7 @@ class ParserError extends CompilerError {
             }
         }
         super(formatted, range, warn)
+        /** @type {number} */
         this.amount_parsed = index
     }
 }

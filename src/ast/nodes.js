@@ -4,17 +4,38 @@ import { CompilerError } from "../errors.js"
 import { Jump } from "../il/control.js"
 
 
-class Node {
+
+
+export class Node {
     constructor() {
         /** @type {StreamRange} */
         this.r = null
     }
+    // eslint-disable-next-line no-unused-vars
     make_il(il_context, symbol_table) {
         throw new Error("Not implemented")
     }
+    static get type() { return Symbol("Node") }
+    get type() { return Node.type }
+    get superType() { return Node.type }
 }
 
-class Root extends Node {
+export class SequenceNode extends Node {
+
+    /**
+     * 
+     * @param {Node[]} items 
+     */
+    constructor(items) {
+        super()
+        this.items = items
+    }
+    static get type() { return Symbol("Node") }
+    get type() { return Node.type }
+    get superType() { return Node.type }
+}
+
+export class Root extends Node {
     /**
      * 
      * @param {Node[]} nodes 
@@ -29,9 +50,11 @@ class Root extends Node {
             node.make_il(il_context, symbol_table)
         }
     }
+    static get type() { return Symbol("Root") }
+    get type() { return Root.type }
 }
 
-class Compound extends Node {
+export class Compound extends Node {
     constructor(nodes) {
         super()
         this.nodes = nodes
@@ -47,9 +70,11 @@ class Compound extends Node {
             symbol_table.end_scope()
         }
     }
+    static get type() { return Symbol("Compound") }
+    get type() { return Compound.type }
 }
 
-class Return extends Node {
+export class Return extends Node {
     constructor(return_value) {
         super()
         this.return_value = return_value
@@ -66,10 +91,12 @@ class Return extends Node {
             //il_context.add(control_cmds.Return())
         }
     }
+    static get type() { return Symbol("Return") }
+    get type() { return Return.type }
 }
 
-class BreakContinue extends Node {
-    get get_label() { return function (c) { return null } }
+export class BreakContinue extends Node {
+    get get_label() { return c => null }
     get description() { return "invalid(break/continue)" }
     make_il(il_context, symbol_table, c) {
         let label = this.get_label(c)
@@ -79,21 +106,35 @@ class BreakContinue extends Node {
             throw new CompilerError(this.description+" statement not in a loop", this.r)
         }
     }
+    static get type() { return Symbol("BreakContinue") }
+    get type() { return BreakContinue.type }
 }
-class Break extends BreakContinue {
-    get get_label() { return function (c) { return c.break_label } }
+
+export class Break extends BreakContinue {
+    get get_label() { return c => c.break_label }
     get description() { return "break" }
+
+    static get type() { return Symbol("Break") }
+    get type() { return Break.type }
+    get superType() { return BreakContinue.type }
 }
-class Continue extends BreakContinue {
-    get get_label() { return function (c) { return c.continue_label } }
+export class Continue extends BreakContinue {
+    get get_label() { return c => c.continue_label }
     get description() { return "continue" }
+
+    static get type() { return Symbol("Break") }
+    get type() { return Break.type }
+    get superType() { return BreakContinue.type }
+
 }
 
-class EmptyStatement extends Node {
+export class EmptyStatement extends Node {
     make_il(il_context, symbol_table, c) {}
+    static get type() { return Symbol("EmptyStatement") }
+    get type() { return EmptyStatement.type }
 }
 
-class ExprStatement extends Node {
+export class ExprStatement extends Node {
     constructor(expr) {
         super()
         this.expr = expr
@@ -103,7 +144,7 @@ class ExprStatement extends Node {
     }
 }
 
-class IfStatement extends Node {
+export class IfStatement extends Node {
     /**
      * 
      * @param {ExprStatement} cond 
@@ -122,28 +163,28 @@ class IfStatement extends Node {
     }
 }
 
-class Identifier extends Node {
+export class Identifier extends Node {
     constructor(name) {
         super()
         this.name = name
     }
 }
 
-class NumberLiteral extends Node {
+export class NumberLiteral extends Node {
     constructor(raw) {
         super()
         this.raw = raw
     }
 }
 
-class StringLiteral extends Node {
+export class StringLiteral extends Node {
     constructor(raw) {
         super()
         this.raw = raw
     }
 }
 
-class Unary extends Node {
+export class Unary extends Node {
     /**
      * @param {TokenKind} op
      * @param {Node} expr
@@ -157,7 +198,7 @@ class Unary extends Node {
     }
 }
 
-class Binary extends Node {
+export class Binary extends Node {
     /**
      * @param {TokenKind} op
      * @param {Node} left
@@ -171,7 +212,7 @@ class Binary extends Node {
     }
 }
 
-class Assignment extends Node {
+export class Assignment extends Node {
     /**
      * @param {TokenKind} op
      * @param {Node} target
@@ -185,7 +226,7 @@ class Assignment extends Node {
     }
 }
 
-class Ternary extends Node {
+export class Ternary extends Node {
     constructor(cond, then_expr, else_expr) {
         super()
         this.cond = cond
@@ -194,7 +235,7 @@ class Ternary extends Node {
     }
 }
 
-class Call extends Node {
+export class Call extends Node {
     /**
      * @param {Node} callee
      * @param {Node[]} args
@@ -206,7 +247,7 @@ class Call extends Node {
     }
 }
 
-class Index extends Node {
+export class Index extends Node {
     constructor(target, index) {
         super()
         this.target = target
@@ -214,7 +255,7 @@ class Index extends Node {
     }
 }
 
-class Member extends Node {
+export class Member extends Node {
     /**
      * @param {Node} target
      * @param {string} name
@@ -229,7 +270,7 @@ class Member extends Node {
 }
 
 
-class SymbolDeclarationItem extends Node {
+export class SymbolDeclarationItem extends Node {
     constructor(name, with_indirection = [], with_assignment = null) {
         super()
         this.name = name
@@ -242,14 +283,14 @@ class SymbolDeclarationItem extends Node {
     }
 }
 
-class TypeIdentifier extends Node {
+export class TypeIdentifier extends Node {
     constructor(name) {
         super()
         this.name = name
     }
 }
 
-class TypeInstance extends Node {
+export class TypeInstance extends Node {
     constructor(name) {
         super()
         this.name = name
@@ -257,7 +298,7 @@ class TypeInstance extends Node {
 
 }
 
-class Typedef extends Node {
+export class Typedef extends Node {
     constructor(name, spec) {
         super()
         this.name = name
@@ -265,7 +306,7 @@ class Typedef extends Node {
     }
 }
 
-class SymbolDeclaration extends Node {
+export class SymbolDeclaration extends Node {
     constructor(items, of_type) {
         super()
         this.items = items
@@ -273,9 +314,3 @@ class SymbolDeclaration extends Node {
     }
 }
 
-export {
-    Node, Root, Compound, Return, Break, Continue, EmptyStatement, ExprStatement, IfStatement,
-    Identifier, NumberLiteral, StringLiteral, Unary, Binary, Assignment, Ternary, Call, Index, Member,
-
-    TypeIdentifier, TypeInstance, Typedef, SymbolDeclaration, SymbolDeclarationItem
-}

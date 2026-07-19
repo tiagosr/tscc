@@ -5,6 +5,7 @@ import { Config, CompilerContext } from "../../src/context.js"
 import { CompilationTarget } from "../../src/target.js"
 import { ParserContext } from "../../src/parser/parser.js"
 import { ParserError } from "../../src/parser/utils.js"
+import { parse_assignment, parse_binary, parse_conditional, parse_expr_statement, parse_expression, parse_statement, parse_unary } from "../../src/parser/parser_nodes.stmt.js"
 
 /**
  * @returns {CompilerContext}
@@ -211,14 +212,14 @@ describe("parser", function() {
         for (const op of prefix_ops) {
             it(`parses prefix '${op}'`, function() {
                 const p = parser_for(`${op}a`)
-                const result = p.parse_unary(0)
+                const result = parse_unary(0, p)
                 assert.deepEqual(shape(result.node), { type: "Unary", op: op, prefix: true, expr: id("a") })
             })
         }
 
         it("chains prefix operators right to left", function() {
             const p = parser_for("!!a")
-            const result = p.parse_unary(0)
+            const result = parse_unary(0, p)
             assert.deepEqual(shape(result.node), {
                 type: "Unary", op: "!", prefix: true,
                 expr: { type: "Unary", op: "!", prefix: true, expr: id("a") }
@@ -227,7 +228,7 @@ describe("parser", function() {
 
         it("binds tighter than postfix isn't its job -- postfix runs first on the operand", function() {
             const p = parser_for("-a[0]")
-            const result = p.parse_unary(0)
+            const result = parse_unary(0, p)
             assert.deepEqual(shape(result.node), {
                 type: "Unary", op: "-", prefix: true,
                 expr: { type: "Index", target: id("a"), index: num("0") }
@@ -236,7 +237,7 @@ describe("parser", function() {
 
         it("falls through to parse_postfix when there is no prefix operator", function() {
             const p = parser_for("a()")
-            const result = p.parse_unary(0)
+            const result = parse_unary(0, p)
             assert.deepEqual(shape(result.node), { type: "Call", callee: id("a"), args: [] })
         })
     })
@@ -244,7 +245,7 @@ describe("parser", function() {
     describe("parse_binary", function() {
         it("is left-associative for same-precedence operators", function() {
             const p = parser_for("a - b - c")
-            const result = p.parse_binary(0, 1)
+            const result = parse_binary(0, 1, p)
             assert.deepEqual(shape(result.node), {
                 type: "Binary", op: "-",
                 left: { type: "Binary", op: "-", left: id("a"), right: id("b") },
@@ -254,7 +255,7 @@ describe("parser", function() {
 
         it("binds '*' tighter than '+'", function() {
             const p = parser_for("a + b * c")
-            const result = p.parse_binary(0, 1)
+            const result = parse_binary(0, 1, p)
             assert.deepEqual(shape(result.node), {
                 type: "Binary", op: "+",
                 left: id("a"),
@@ -264,7 +265,7 @@ describe("parser", function() {
 
         it("respects parentheses over precedence", function() {
             const p = parser_for("(a + b) * c")
-            const result = p.parse_binary(0, 1)
+            const result = parse_binary(0, 1, p)
             assert.deepEqual(shape(result.node), {
                 type: "Binary", op: "*",
                 left: { type: "Binary", op: "+", left: id("a"), right: id("b") },
@@ -287,7 +288,7 @@ describe("parser", function() {
         for (const [source, outer_op, inner_op] of precedence_pairs) {
             it(`parses '${source}' as ${outer_op}(a, ${inner_op}(b, c))`, function() {
                 const p = parser_for(source)
-                const result = p.parse_binary(0, 1)
+                const result = parse_binary(0, 1, p)
                 assert.deepEqual(shape(result.node), {
                     type: "Binary", op: outer_op,
                     left: id("a"),
@@ -299,7 +300,7 @@ describe("parser", function() {
         it("stops at an operator below the given minimum precedence", function() {
             // min_prec above '||' (1) means it should stop right after 'a'
             const p = parser_for("a || b")
-            const result = p.parse_binary(0, 2)
+            const result = parse_binary(0, 2, p)
             assert.deepEqual(shape(result.node), id("a"))
             assert.equal(result.index, 1)
         })
@@ -308,19 +309,19 @@ describe("parser", function() {
     describe("parse_conditional", function() {
         it("parses a plain binary expression when there's no '?'", function() {
             const p = parser_for("a + b")
-            const result = p.parse_conditional(0)
+            const result = parse_conditional(0, p)
             assert.deepEqual(shape(result.node), { type: "Binary", op: "+", left: id("a"), right: id("b") })
         })
 
         it("parses a simple ternary", function() {
             const p = parser_for("a ? b : c")
-            const result = p.parse_conditional(0)
+            const result = parse_conditional(0, p)
             assert.deepEqual(shape(result.node), { type: "Ternary", cond: id("a"), then_expr: id("b"), else_expr: id("c") })
         })
 
         it("is right-associative when nested in the else branch", function() {
             const p = parser_for("a ? b : c ? d : e")
-            const result = p.parse_conditional(0)
+            const result = parse_conditional(0, p)
             assert.deepEqual(shape(result.node), {
                 type: "Ternary", cond: id("a"), then_expr: id("b"),
                 else_expr: { type: "Ternary", cond: id("c"), then_expr: id("d"), else_expr: id("e") }
@@ -329,7 +330,7 @@ describe("parser", function() {
 
         it("allows a full expression (e.g. an assignment) in the 'then' branch", function() {
             const p = parser_for("a ? b = 1 : c")
-            const result = p.parse_conditional(0)
+            const result = parse_conditional(0, p)
             assert.deepEqual(shape(result.node), {
                 type: "Ternary", cond: id("a"),
                 then_expr: { type: "Assignment", op: "=", target: id("b"), value: num("1") },
@@ -339,26 +340,26 @@ describe("parser", function() {
 
         it("throws a ParserError when the ':' branch is missing", function() {
             const p = parser_for("a ? b")
-            assert.throws(function() { p.parse_conditional(0) }, ParserError)
+            assert.throws(function() { parse_conditional(0, p) }, ParserError)
         })
     })
 
     describe("parse_assignment", function() {
         it("parses a plain conditional expression when there's no assignment operator", function() {
             const p = parser_for("a + b")
-            const result = p.parse_assignment(0)
+            const result = parse_assignment(0, p)
             assert.deepEqual(shape(result.node), { type: "Binary", op: "+", left: id("a"), right: id("b") })
         })
 
         it("parses a simple assignment", function() {
             const p = parser_for("a = b")
-            const result = p.parse_assignment(0)
+            const result = parse_assignment(0, p)
             assert.deepEqual(shape(result.node), { type: "Assignment", op: "=", target: id("a"), value: id("b") })
         })
 
         it("is right-associative", function() {
             const p = parser_for("a = b = c")
-            const result = p.parse_assignment(0)
+            const result = parse_assignment(0, p)
             assert.deepEqual(shape(result.node), {
                 type: "Assignment", op: "=", target: id("a"),
                 value: { type: "Assignment", op: "=", target: id("b"), value: id("c") }
@@ -369,7 +370,7 @@ describe("parser", function() {
         for (const op of compound_ops) {
             it(`parses compound assignment '${op}'`, function() {
                 const p = parser_for(`a ${op} b`)
-                const result = p.parse_assignment(0)
+                const result = parse_assignment(0, p)
                 assert.deepEqual(shape(result.node), { type: "Assignment", op: op, target: id("a"), value: id("b") })
             })
         }
@@ -378,7 +379,7 @@ describe("parser", function() {
     describe("parse_expression", function() {
         it("delegates to parse_assignment", function() {
             const p = parser_for("a = 1 + 2")
-            const result = p.parse_expression(0)
+            const result = parse_expression(0, p)
             assert.deepEqual(shape(result.node), {
                 type: "Assignment", op: "=", target: id("a"),
                 value: { type: "Binary", op: "+", left: num("1"), right: num("2") }
@@ -389,14 +390,14 @@ describe("parser", function() {
     describe("parse_expr_statement", function() {
         it("parses a bare ';' as an empty statement", function() {
             const p = parser_for(";")
-            const result = p.parse_expr_statement(0)
+            const result = parse_expr_statement(0, p)
             assert.deepEqual(shape(result.node), { type: "EmptyStatement" })
             assert.equal(result.index, 1)
         })
 
         it("parses an expression followed by ';'", function() {
             const p = parser_for("a = b + c;")
-            const result = p.parse_expr_statement(0)
+            const result = parse_expr_statement(0, p)
             assert.deepEqual(shape(result.node), {
                 type: "ExprStatement",
                 expr: { type: "Assignment", op: "=", target: id("a"), value: { type: "Binary", op: "+", left: id("b"), right: id("c") } }
@@ -406,12 +407,12 @@ describe("parser", function() {
 
         it("throws a ParserError when the ';' is missing", function() {
             const p = parser_for("a = b")
-            assert.throws(function() { p.parse_expr_statement(0) }, ParserError)
+            assert.throws(function() { parse_expr_statement(0, p) }, ParserError)
         })
 
         it("sets a source range covering the whole statement, including the ';'", function() {
             const p = parser_for("a;")
-            const result = p.parse_expr_statement(0)
+            const result = parse_expr_statement(0, p)
             assert.notEqual(result.node.r, null)
             assert.equal(result.node.r.end.column, p.tokens[1].r.end.column)
         })
@@ -420,13 +421,13 @@ describe("parser", function() {
     describe("parse_statement", function() {
         it("currently just delegates to parse_expr_statement via first_of", function() {
             const p = parser_for("a;")
-            const result = p.parse_statement(0)
+            const result = parse_statement(0, p)
             assert.deepEqual(shape(result.node), { type: "ExprStatement", expr: id("a") })
         })
 
         it("surfaces the underlying ParserError when its sole alternative fails", function() {
             const p = parser_for("a")
-            assert.throws(function() { p.parse_statement(0) }, ParserError)
+            assert.throws(() => { parse_statement(0, p) }, ParserError)
         })
     })
 
