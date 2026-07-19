@@ -590,6 +590,45 @@ describe("parser", function() {
                     }]
                 })
             })
+
+            it("correctly parses a typedef from a previously typedef'ed typedef", function() {
+                const p = parser_for("typedef int some_type;\ntypedef some_type some_other_type;")
+                const result = parse_root(p)
+                assert.deepEqual(shape(result.node), {
+                    type: "Root",
+                    nodes:[{
+                        type: "Typedef",
+                        name: {
+                            type: "TypeIdentifier",
+                            name: "some_type"
+                        },
+                        spec: {
+                            type: "TypeIdentifier",
+                            name: "int"
+                        }
+                    }, {
+                        type: "Typedef",
+                        name: {
+                            type: "TypeIdentifier",
+                            name: "some_other_type"
+                        },
+                        spec: {
+                            type: "TypeIdentifier",
+                            name: "some_type"
+                        }
+                    }]
+                })
+            })
+
+            it("correctly throws an error if typedef on top of a previously typedef'ed typedef", function() {
+                const p = parser_for("typedef int some_type;typedef bool some_type;")
+                assert.throws(() => { parse_root(p) }, ParserError)
+            })
+
+            it("correctly throws an error if typedef on top of an undefined symbol", function() {
+                const p = parser_for("typedef some_undefined_type some_type;")
+                assert.throws(() => { parse_root(p) }, ParserError)
+            })
         })
 
 

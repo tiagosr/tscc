@@ -25,7 +25,11 @@ export const parse_typedef = (index, ctx) => {
     /** @type {TypeIdentifier} */
     const typeid = new_typename_result.node
 
-    return new NodeIndexPair(ctx.finish(new Typedef(typeid, spec), index, new_typename_result.index), new_typename_result.index)
+    if (!ctx.match_token(new_typename_result.index, semicolon)) {
+        return ctx.throw_error_got("expected ';' at end of typedef", new_typename_result.index)
+    }
+
+    return new NodeIndexPair(ctx.finish(new Typedef(typeid, spec), index, new_typename_result.index + 1), new_typename_result.index + 1)
 }
 
     /**
